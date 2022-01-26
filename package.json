@@ -1,0 +1,20 @@
+{
+  "name": "gsn-executor-relay",
+  "version": "1.0.0",
+  "description": "",
+  "license": "ISC",
+  "author": "Sergey <itsib.su@gmail.com>",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "express": "^4.17.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.13",
+    "typescript": "^4.5.5"
+  }
+}

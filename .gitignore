@@ -1,0 +1,10 @@
+# IDE files
+.vscode/
+.idea/
+
+node_modules/
+
+build/
+abi/
+
+.env
