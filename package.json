@@ -4,17 +4,29 @@
   "description": "",
   "license": "ISC",
   "author": "Sergey <itsib.su@gmail.com>",
-  "main": "dist/index.js",
+  "main": "build/index.js",
   "scripts": {
     "build": "tsc",
-    "start": "node .",
+    "start": "node ./build/index.js",
+    "watch": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
-    "express": "^4.17.2"
+    "@tsed/exceptions": "^6.98.1",
+    "compression": "^1.7.4",
+    "cors": "^2.8.5",
+    "dotenv": "^14.3.2",
+    "express": "^4.17.2",
+    "winston": "^3.4.0",
+    "winston-daily-rotate-file": "^4.6.0"
   },
   "devDependencies": {
+    "@types/compression": "^1.7.2",
+    "@types/cors": "^2.8.12",
+    "@types/dotenv": "^8.2.0",
     "@types/express": "^4.17.13",
+    "@types/node": "^17.0.12",
+    "ts-node": "^10.4.0",
     "typescript": "^4.5.5"
   }
 }

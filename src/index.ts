@@ -1,8 +1,5 @@
-import express from 'express'
+import { App } from './app';
+import { IndexRoute, RelayRoute } from './routes';
 
-const app = express();
-const port = 5000;
-app.get('/', (request, response) => {
-  response.send('Hello world!');
-});
-app.listen(port, () => console.log(`Running on port ${port}`));
+const app = new App([new IndexRoute(), new RelayRoute()]);
+app.listen();
