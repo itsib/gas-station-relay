@@ -1,0 +1,22 @@
+version: '3'
+
+services:
+  relay:
+    image: sergeyitsib/gsn-relay:latest
+    container_name: gsn-relay
+    restart: always
+    env_file:
+      - ./.env
+    volumes:
+      - ./logs:/app/logs
+    environment:
+      PORT: '3200'
+      CORS_ORIGIN: '*'
+    ports:
+      - '3200:3200'
+    networks:
+      - gsn-net
+
+networks:
+  gsn-net:
+    driver: bridge
