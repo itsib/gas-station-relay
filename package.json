@@ -13,9 +13,13 @@
   },
   "dependencies": {
     "@tsed/exceptions": "^6.98.1",
+    "ajv": "^8.9.0",
+    "ajv-formats": "^2.1.1",
+    "better-ajv-errors": "^1.1.2",
     "compression": "^1.7.4",
     "cors": "^2.8.5",
     "dotenv": "^14.3.2",
+    "ethers": "^5.5.3",
     "express": "^4.17.2",
     "winston": "^3.4.0",
     "winston-daily-rotate-file": "^4.6.0"

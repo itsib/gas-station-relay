@@ -1,5 +1,11 @@
 import { App } from './app';
 import { IndexRoute, RelayRoute } from './routes';
 
-const app = new App([new IndexRoute(), new RelayRoute()]);
-app.listen();
+try {
+  const app = new App([new IndexRoute(), new RelayRoute()]);
+  app.listen();
+} catch (e) {
+  console.error('Unhandled Error:');
+  console.error(e);
+  process.exit(-1);
+}
