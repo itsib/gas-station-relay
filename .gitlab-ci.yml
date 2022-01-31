@@ -34,13 +34,13 @@ build:
 .deploy_script: &deploy_script
   script:
     - vault kv get -field=kubeconfig utils/gitlab_deploy/common > /kubeconfig
+    - chmod 400 /kubeconfig
     - export KUBECONFIG=/kubeconfig
     - helm upgrade --install ${CI_PROJECT_NAME} -n ${NAMESPACE}
       --values ${CHARTS_PATH}/${CI_PROJECT_NAME}/values.yaml
       --values ${CHARTS_PATH}/${CI_PROJECT_NAME}/values-${CI_ENVIRONMENT_NAME}.yaml
       --set image.tag=${CI_COMMIT_REF_NAME}
       --set image.repository=${CI_REGISTRY_IMAGE}
-      --set env.GITHASH=${CI_COMMIT_SHA}
       ${CHARTS_PATH}/${CI_PROJECT_NAME}
 
 deploy:develop:
