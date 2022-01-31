@@ -9,5 +9,5 @@ WORKDIR /app
 COPY --from=dist build /app/
 COPY --from=dist node_modules /app/node_modules
 COPY package.json package-lock.json /app/
-
+EXPOSE 3000
 CMD ["npm", "start"]
