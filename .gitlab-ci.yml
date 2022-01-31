@@ -1,0 +1,70 @@
+variables:
+  DOCKER_TLS_CERTDIR: ""
+  DOCKER_HOST: tcp://localhost:2375/
+  DOCKER_DRIVER: overlay2
+  CHARTS_PATH: /deploy/charts
+  VAULT_ADDR: http://vault.utils:8200
+  NAMESPACE: gsn
+
+stages:
+  - build
+  - deploy
+
+build:
+  image: docker:19.03-dind
+  stage: build
+  before_script:
+    - echo "$CI_REGISTRY_PASSWORD" | docker login --username "$CI_REGISTRY_USER" --password-stdin  $CI_REGISTRY
+  services:
+    - docker:19.03-dind
+  script:
+    - docker build
+      --tag "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
+      --file Dockerfile .
+    - docker push "$CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
+  after_script:
+    - echo "GITLAB REGISTRY IMAGE >> $CI_REGISTRY_IMAGE:$CI_COMMIT_REF_NAME"
+  tags:
+    - build
+
+.before_script: &before_script
+  before_script:
+    - export VAULT_TOKEN="$(vault write -field=token auth/jwt/login role=gitlab_deploy jwt=$CI_JOB_JWT)"
+
+.deploy_script: &deploy_script
+  script:
+    - vault kv get -field=kubeconfig utils/gitlab_deploy/common > /kubeconfig
+    - export KUBECONFIG=/kubeconfig
+    - helm upgrade --install ${CI_PROJECT_NAME} -n ${NAMESPACE}
+      --values ${CHARTS_PATH}/${CI_PROJECT_NAME}/values.yaml
+      --values ${CHARTS_PATH}/${CI_PROJECT_NAME}/values-${CI_ENVIRONMENT_NAME}.yaml
+      --set image.tag=${CI_COMMIT_REF_NAME}
+      --set image.repository=${CI_REGISTRY_IMAGE}
+      --set env.GITHASH=${CI_COMMIT_SHA}
+      ${CHARTS_PATH}/${CI_PROJECT_NAME}
+
+deploy:develop:
+  stage: deploy
+  image: dockerhub.plasma-bank.com/infra/helm:latest
+  <<: *before_script
+  <<: *deploy_script
+  environment:
+    name: develop
+  when: manual
+  tags:
+    - deploy_dev
+
+deploy:production:
+  stage: deploy
+  image: dockerhub.plasma-bank.com/infra/helm:latest
+  <<: *before_script
+  <<: *deploy_script
+  environment:
+    name: production
+  when: manual
+  only:
+    - /v.*/
+  except:
+    - branches
+  tags:
+    - deploy_prod

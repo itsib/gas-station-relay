@@ -10,7 +10,8 @@
   "author": "Sergey <itsib.su@gmail.com>",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && ./build.sh",
+    "build": "tsc",
+    "docker": "tsc && ./build.sh",
     "start": "node ./index.js",
     "watch": "nodemon",
     "test": "echo \"Error: no test specified\" && exit 1",
