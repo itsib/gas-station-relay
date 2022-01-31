@@ -35,7 +35,6 @@ export class RelayController {
 
       return res.json({
         chainId: network.chainId,
-        feePayerAddress: this._wallet.address,
         relayAddress: this._relayContract.address,
       });
     } catch (error) {
