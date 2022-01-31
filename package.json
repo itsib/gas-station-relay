@@ -1,6 +1,6 @@
 {
   "name": "gsn-relay",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Performs transactions for tokens",
   "license": "MIT",
   "repository": {
