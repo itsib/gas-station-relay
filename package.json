@@ -10,7 +10,8 @@
   "author": "Sergey <itsib.su@gmail.com>",
   "main": "index.js",
   "scripts": {
-    "build": "tsc && ./build.sh",
+    "build": "tsc",
+    "docker": "tsc && ./build.sh",
     "start": "node ./index.js",
     "dev": "ts-node ./src/index.ts",
     "dev:watch": "nodemon",
