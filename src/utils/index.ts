@@ -1,3 +1,2 @@
-export * from './string-to-bool';
 export * from './logger';
-export * from './parse-call-error';
+export * from './parse-rpc-call-error';

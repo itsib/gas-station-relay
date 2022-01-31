@@ -4,14 +4,10 @@ import { BaseProvider } from '@ethersproject/providers';
 import { BadRequest, InternalServerError } from '@tsed/exceptions';
 import { BigNumber, Contract, getDefaultProvider, Wallet } from 'ethers';
 import { NextFunction, Request, Response } from 'express';
-import { resolve } from 'path';
 import GSN_EXECUTOR_ABI from '../abi/gsn-tx-executor.json';
 import SWAP_ROUTER_ABI from '../abi/swap-router.json';
-import { parseCallError } from '../utils';
-
-const MAX_UINT256 = '0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff';
-
-require('dotenv').config({ path: resolve(`${process.cwd()}/.env`) });
+import { CONFIG } from '../config';
+import { logger, parseRpcCallError } from '../utils';
 
 export class RelayController {
 
@@ -26,20 +22,10 @@ export class RelayController {
   private _swapRouterContract: Contract;
 
   constructor() {
-    if (!process.env.RPC_URL) {
-      throw new Error('The environment variable RPC_URL is not set.');
-    }
-    if (!process.env.FEE_PAYER_WALLET_KEY) {
-      throw new Error('The environment variable FEE_PAYER_WALLET_KEY is not set.');
-    }
-    if (!process.env.RELAY_CONTRACT_ADDRESS) {
-      throw new Error('The environment variable RELAY_CONTRACT_ADDRESS is not set.');
-    }
-
     this._minPriorityFeePerGas = BigNumber.from(1e9);
-    this._provider = getDefaultProvider(process.env.RPC_URL);
-    this._wallet = new Wallet(process.env.FEE_PAYER_WALLET_KEY, this._provider);
-    this._relayContract = new Contract(process.env.RELAY_CONTRACT_ADDRESS, new Interface(GSN_EXECUTOR_ABI), this._wallet);
+    this._provider = getDefaultProvider(CONFIG.RPC_URL);
+    this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
+    this._relayContract = new Contract(CONFIG.RELAY_CONTRACT_ADDRESS, new Interface(GSN_EXECUTOR_ABI), this._wallet);
     this._relayContract.getRouter().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
   }
 
@@ -74,6 +60,13 @@ export class RelayController {
       try {
         const getAmountsInEstimateGas = await this._swapRouterContract.estimateGas.getAmountsIn(approximateFee, [token, weth]);
         const estimateGas = getAmountsInEstimateGas.add(totalRelayGasUsage).toString();
+
+        logger.debug(`Max Permit Gas Usage: ${relayGas[0].toString()}`);
+        logger.debug(`Pre Call Gas Usage: ${relayGas[1].toString()}`);
+        logger.debug(`Post Call Gas Usage: ${relayGas[2].toString()}`);
+        logger.debug(`Get Exchange Rate Gas Usage: ${getAmountsInEstimateGas.toString()}`);
+        logger.debug(`Total Estimate Gas: ${estimateGas}`);
+
         return res.json({ estimateGas });
       } catch (e) {
         return next(new BadRequest('There is no liquidity for the selected token', []));
@@ -123,34 +116,22 @@ export class RelayController {
       gasLimit: tx.gas,
       ...(block.baseFeePerGas ? { maxFeePerGas: tx.maxFeePerGas, maxPriorityFeePerGas: tx.maxPriorityFeePerGas } : { gasPrice: tx.gasPrice })
     };
+    logger.debug(`Send ${block.baseFeePerGas ? 'EIP-1559' : 'Legacy'} Transaction: `);
+    logger.debug(`TX Options ${JSON.stringify(txOptions, null, '  ')}`);
 
     // We check whether the transaction completes successfully.
-    // try {
-    //   await this._relayContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
-    // } catch (e) {
-    //   const message = parseCallError(e);
-    //   return next(new BadRequest(message, []));
-    // }
-
-    // Estimate gas verification
-    // let minEstimateGas: BigNumber;
-    // try {
-    //   minEstimateGas = await this._relayContract.estimateGas.sendTransaction(tx, fee, signature);
-    // } catch (e) {
-    //   return next(new InternalServerError(e.message, e));
-    // }
-    // if (minEstimateGas.gt(tx.gas)) {
-    //   return next(
-    //     new BadRequest('Validation error', [
-    //       { field: '/tx/gas', message: 'The amount of gas is not enough to complete the transaction' },
-    //     ])
-    //   );
-    // }
+    try {
+      logger.debug(`Transaction verification by calling eth_call`);
+      await this._relayContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
+    } catch (e) {
+      const error = parseRpcCallError(e);
+      return next(new InternalServerError(error ? error.message : e.message, error || e));
+    }
 
     // Send client transaction
     try {
       const transaction = await this._relayContract.sendTransaction(tx, fee, signature, txOptions);
-
+      logger.debug(`Transaction sent ${transaction.hash}`);
       return res.json({ txHash: transaction.hash });
     } catch (e) {
       return next(new InternalServerError(e.message, e));

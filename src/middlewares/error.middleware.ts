@@ -1,19 +1,17 @@
 import { NextFunction, Request, Response } from 'express';
 import { HTTPException } from '@tsed/exceptions';
+import { logger } from '../utils';
 
 export const errorMiddleware = (error: HTTPException, req: Request, res: Response, next: NextFunction) => {
-  try {
-    const status: number = error.status || 500;
-    const message: string = error.message || 'Something went wrong';
+  const status: number = error.status || 500;
+  const message: string = error.message || 'Something went wrong';
 
-    console.error(`[${req.method}] ${req.path} >> StatusCode:: ${status}, Message:: ${message}`);
-
-    if (status === 400) {
-      res.status(status).json({ status, message, validationErrors: error.body || [] })
-    } else {
-      res.status(status).json({ status, message })
-    }
-  } catch (error) {
-    next(error);
+  if (status === 400) {
+    const validationErrors = error.body || [];
+    logger.warn(`Validation error ${JSON.stringify(validationErrors, null, '  ')}`);
+    res.status(status).json({ status, message, validationErrors: error.body || [] });
+  } else {
+    logger.error(`${error.body.message} ${JSON.stringify(error.body, null, '  ')}`);
+    res.status(status).json({ status, message });
   }
 };

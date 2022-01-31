@@ -1,64 +1,42 @@
-import { existsSync, mkdirSync } from 'fs';
-import { join, resolve } from 'path';
 import winston from 'winston';
-import winstonDaily from 'winston-daily-rotate-file';
+import chalk from 'chalk';
+import { CONFIG } from '../config';
 
-require('dotenv').config({ path: resolve(`${process.cwd()}/.env`) });
+const isDev = CONFIG.NODE_ENV === 'development';
 
-const LOG_DIR = process.env.LOG_DIR ? process.env.LOG_DIR : join(process.cwd(), 'logs');
+const logSimpleFormat = winston.format.printf(({ timestamp, level, message }) => `${timestamp} ${level}: ${message}`);
 
-if (!existsSync(LOG_DIR)) {
-  mkdirSync(LOG_DIR);
-}
+const logPrettyFormat = winston.format.printf(({ timestamp, level, message }) => {
+  const prettyTimestamp = chalk.gray(timestamp);
 
-const logFormat = winston.format.printf(({ timestamp, level, message }) => `${timestamp} ${level}: ${message}`);
+  let prettyLevel: string;
+  switch (level) {
+    case 'error':
+      prettyLevel = chalk.red('[ERROR]');
+      break;
+    case 'warm':
+      prettyLevel = chalk.yellow('[WARN]');
+      break;
+    case 'debug':
+      prettyLevel = chalk.blue('[DEBUG]');
+      break;
+    default:
+      prettyLevel = chalk.whiteBright(`[${level.toUpperCase()}]`);
+      break;
+  }
 
-/*
- * Log Level
- * error: 0, warn: 1, info: 2, http: 3, verbose: 4, debug: 5, silly: 6
- */
+  return `${prettyTimestamp} ${prettyLevel}: ${message}`
+});
+
 const logger = winston.createLogger({
+  level: CONFIG.LOG_LEVEL,
   format: winston.format.combine(
-    winston.format.timestamp({
-      format: 'YYYY-MM-DD HH:mm:ss',
-    }),
-    logFormat,
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    isDev ? logPrettyFormat : logSimpleFormat,
   ),
   transports: [
-    // debug log setting
-    new winstonDaily({
-      level: 'debug',
-      datePattern: 'YYYY-MM-DD',
-      dirname: LOG_DIR + '/debug', // log file /logs/debug/*.log in save
-      filename: `%DATE%.log`,
-      maxFiles: 30, // 30 Days saved
-      json: false,
-      zippedArchive: true,
-    }),
-    // error log setting
-    new winstonDaily({
-      level: 'error',
-      datePattern: 'YYYY-MM-DD',
-      dirname: LOG_DIR + '/error', // log file /logs/error/*.log in save
-      filename: `%DATE%.log`,
-      maxFiles: 30, // 30 Days saved
-      handleExceptions: true,
-      json: false,
-      zippedArchive: true,
-    }),
+    new winston.transports.Console(),
   ],
 });
 
-logger.add(
-  new winston.transports.Console({
-    format: winston.format.combine(winston.format.splat(), winston.format.colorize()),
-  }),
-);
-
-const stream = {
-  write: (message: string) => {
-    logger.info(message.substring(0, message.lastIndexOf('\n')));
-  },
-};
-
-export { logger, stream };
+export { logger };

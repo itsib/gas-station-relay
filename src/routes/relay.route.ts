@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { RelayController } from '../controllers/relay.controller';
-import { validateMiddleware } from '../middlewares/validate.middleware';
+import { validateMiddleware } from '../middlewares';
 import { POST_ESTIMATE_GAS_SCHEMA } from '../schemas/post-estimate-gas.schema';
 import { POST_SEND_TRANSACTION_SCHEMA } from '../schemas/post-send-transaction';
 import { Route } from '../types';
