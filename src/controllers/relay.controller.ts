@@ -27,6 +27,9 @@ export class RelayController {
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
     this._relayContract = new Contract(CONFIG.RELAY_CONTRACT_ADDRESS, new Interface(GSN_EXECUTOR_ABI), this._wallet);
     this._relayContract.getRouter().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
+
+    logger.debug(`Fee Payer Wallet ${this._wallet.address}`);
+    logger.debug(`Relay Contract Address ${this._relayContract.address}`);
   }
 
   public async index(req: Request, res: Response, next: NextFunction): Promise<any> {
