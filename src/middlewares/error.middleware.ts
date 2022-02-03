@@ -11,7 +11,7 @@ export const errorMiddleware = (error: HTTPException, req: Request, res: Respons
     logger.warn(`Validation error ${JSON.stringify(validationErrors, null, '  ')}`);
     res.status(status).json({ status, message, validationErrors: error.body || [] });
   } else {
-    logger.error(`${error.body.message} ${JSON.stringify(error.body, null, '  ')}`);
+    logger.error(`${message} ${error.body ? JSON.stringify(error.body, null, '  ') : ''}`);
     res.status(status).json({ status, message });
   }
 };

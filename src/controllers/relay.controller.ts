@@ -1,10 +1,11 @@
 import { Interface } from '@ethersproject/abi';
 import { Block } from '@ethersproject/abstract-provider';
+import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
 import { BadRequest, InternalServerError } from '@tsed/exceptions';
 import { BigNumber, Contract, getDefaultProvider, Wallet } from 'ethers';
 import { NextFunction, Request, Response } from 'express';
-import GSN_EXECUTOR_ABI from '../abi/gsn-tx-executor.json';
+import PLASMA_GAS_STATION_ABI from '../abi/plasma-gas-station.json';
 import SWAP_ROUTER_ABI from '../abi/swap-router.json';
 import { CONFIG } from '../config';
 import { logger, parseRpcCallError } from '../utils';
@@ -25,7 +26,7 @@ export class RelayController {
     this._minPriorityFeePerGas = BigNumber.from(1e9);
     this._provider = getDefaultProvider(CONFIG.RPC_URL);
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
-    this._relayContract = new Contract(CONFIG.RELAY_CONTRACT_ADDRESS, new Interface(GSN_EXECUTOR_ABI), this._wallet);
+    this._relayContract = new Contract(CONFIG.RELAY_CONTRACT_ADDRESS, new Interface(PLASMA_GAS_STATION_ABI), this._wallet);
     this._relayContract.getRouter().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
 
     logger.debug(`Fee Payer Wallet ${this._wallet.address}`);
@@ -34,11 +35,17 @@ export class RelayController {
 
   public async index(req: Request, res: Response, next: NextFunction): Promise<any> {
     try {
-      const network = await this._provider.getNetwork();
+      const [network, txRelayFee, supportedTokens]: [Network, BigNumber, string[]] = await Promise.all([
+        this._provider.getNetwork(),
+        this._relayContract.getTxRelayFee(),
+        this._relayContract.feeTokens(),
+      ]);
 
       return res.json({
         chainId: network.chainId,
         relayAddress: this._relayContract.address,
+        txRelayFee: txRelayFee.toNumber(),
+        supportedTokens: supportedTokens,
       });
     } catch (error) {
       next(error);
@@ -48,28 +55,25 @@ export class RelayController {
   public async estimateGas(req: Request, res: Response, next: NextFunction): Promise<any> {
     try {
       const { from, to, value, data, token } = req.body;
-      const [relayGas, transactionGas, weth, block, gasPrice]: [[BigNumber, BigNumber, BigNumber], BigNumber, string, Block, BigNumber] = await Promise.all([
-        this._relayContract.getGasLimits(),
+      const [relayEstimateGas, txEstimateGas, weth, block, gasPrice]: [BigNumber, BigNumber, string, Block, BigNumber] = await Promise.all([
+        this._relayContract.getEstimateGas(token),
         this._relayContract.estimateGas.execute(from, to, value, data),
         this._swapRouterContract.WETH(),
         this._provider.getBlock('pending'),
         this._provider.getGasPrice(),
       ]);
 
-      const totalRelayGasUsage = relayGas[0].add(relayGas[1]).add(relayGas[2]).add(transactionGas).toString();
-      const approximateFee = block.baseFeePerGas ? block.baseFeePerGas.add(this._minPriorityFeePerGas).mul(totalRelayGasUsage) : gasPrice.mul(totalRelayGasUsage);
+      const estimateGas = relayEstimateGas.add(txEstimateGas).toString();
+      const approximateFee = block.baseFeePerGas ? block.baseFeePerGas.add(this._minPriorityFeePerGas).mul(estimateGas) : gasPrice.mul(estimateGas);
 
       try {
-        const getAmountsInEstimateGas = await this._swapRouterContract.estimateGas.getAmountsIn(approximateFee, [token, weth]);
-        const estimateGas = getAmountsInEstimateGas.add(totalRelayGasUsage).toString();
+        await this._swapRouterContract.estimateGas.getAmountsIn(approximateFee, [token, weth]);
 
-        logger.debug(`Max Permit Gas Usage: ${relayGas[0].toString()}`);
-        logger.debug(`Pre Call Gas Usage: ${relayGas[1].toString()}`);
-        logger.debug(`Post Call Gas Usage: ${relayGas[2].toString()}`);
-        logger.debug(`Get Exchange Rate Gas Usage: ${getAmountsInEstimateGas.toString()}`);
-        logger.debug(`Total Estimate Gas: ${estimateGas}`);
+        logger.debug(`Relay Estimate Gas: ${relayEstimateGas.toString()}`);
+        logger.debug(`Transaction Estimate Gas: ${txEstimateGas.toString()}`);
+        logger.debug(`Total Estimate Gas: ${estimateGas.toString()}`);
 
-        return res.json({ estimateGas });
+        return res.json({ estimateGas: estimateGas.toString() });
       } catch (e) {
         return next(new BadRequest('There is no liquidity for the selected token', []));
       }

@@ -8,8 +8,13 @@
       },
       {
         "internalType": "address",
-        "name": "_txFeePayer",
+        "name": "_feePayer",
         "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_txRelayFee",
+        "type": "uint256"
       }
     ],
     "stateMutability": "nonpayable",
@@ -239,24 +244,70 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_txFeePayer",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_txRelayFee",
+        "type": "uint256"
       }
     ],
-    "name": "setTxFeePayer",
+    "name": "setTxRelayFee",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getTxFeePayer",
+    "name": "getTxRelayFee",
     "outputs": [
       {
-        "internalType": "address",
+        "internalType": "uint256",
         "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feePayer",
         "type": "address"
+      }
+    ],
+    "name": "addTrustedFeePayer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feePayer",
+        "type": "address"
+      }
+    ],
+    "name": "removeTrustedFeePayer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feePayer",
+        "type": "address"
+      }
+    ],
+    "name": "hasTrustedFeePayer",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -267,39 +318,106 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_txMaxPermitGasUsage",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_txPreCallGasUsage",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_txPostCallGasUsage",
+        "name": "_maxPreCallGasUsage",
         "type": "uint256"
       }
     ],
-    "name": "setGasLimits",
+    "name": "setMaxPreCallGasUsage",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getGasLimits",
+    "name": "getMaxPreCallGasUsage",
     "outputs": [
       {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      },
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "_maxPostCallGasUsage",
+        "type": "uint256"
+      }
+    ],
+    "name": "setMaxPostCallGasUsage",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getMaxPostCallGasUsage",
+    "outputs": [
       {
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
-      },
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [],
+    "name": "feeTokens",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feeToken",
+        "type": "address"
+      }
+    ],
+    "name": "addFeeToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feeToken",
+        "type": "address"
+      }
+    ],
+    "name": "removeFeeToken",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feeToken",
+        "type": "address"
+      }
+    ],
+    "name": "getEstimateGas",
+    "outputs": [
       {
         "internalType": "uint256",
         "name": "",
