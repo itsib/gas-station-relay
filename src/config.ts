@@ -12,7 +12,7 @@ export const CONFIG = {
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
   RPC_URL: required(process.env.RPC_URL, 'The environment variable RPC_URL is not set.'),
   FEE_PAYER_WALLET_KEY: required(process.env.FEE_PAYER_WALLET_KEY, 'The environment variable FEE_PAYER_WALLET_KEY is not set.'),
-  RELAY_CONTRACT_ADDRESS: required(process.env.RELAY_CONTRACT_ADDRESS, 'The environment variable RELAY_CONTRACT_ADDRESS is not set.'),
+  GAS_STATION_CONTRACT_ADDRESS: required(process.env.GAS_STATION_CONTRACT_ADDRESS, 'The environment variable GAS_STATION_CONTRACT_ADDRESS is not set.'),
 }
 
 function dotenvConfig(): { path: string } | undefined {

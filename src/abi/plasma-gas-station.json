@@ -8,12 +8,17 @@
       },
       {
         "internalType": "address",
+        "name": "_feeTokensStore",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
         "name": "_feePayer",
         "type": "address"
       },
       {
         "internalType": "uint256",
-        "name": "_txRelayFee",
+        "name": "_txRelayFeePercent",
         "type": "uint256"
       }
     ],
@@ -63,7 +68,13 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "feeAmount",
+        "name": "totalFeeInTokens",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "txRelayFee",
         "type": "uint256"
       }
     ],
@@ -116,6 +127,19 @@
     "inputs": [
       {
         "internalType": "address",
+        "name": "_feePayer",
+        "type": "address"
+      }
+    ],
+    "name": "addFeePayer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
         "name": "from",
         "type": "address"
       }
@@ -126,6 +150,26 @@
         "internalType": "uint256",
         "name": "",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feePayer",
+        "type": "address"
+      }
+    ],
+    "name": "hasFeePayer",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -181,6 +225,19 @@
     "constant": true
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "_feePayer",
+        "type": "address"
+      }
+    ],
+    "name": "removeFeePayer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renounceOwnership",
     "outputs": [],
@@ -217,7 +274,7 @@
   {
     "inputs": [
       {
-        "internalType": "contract IUniswapV2Router02",
+        "internalType": "contract ISwapRouter",
         "name": "_router",
         "type": "address"
       }
@@ -244,24 +301,24 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "_txRelayFee",
-        "type": "uint256"
+        "internalType": "contract IPlasmaGasStationTokens",
+        "name": "_feeTokensStore",
+        "type": "address"
       }
     ],
-    "name": "setTxRelayFee",
+    "name": "setFeeTokensStore",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [],
-    "name": "getTxRelayFee",
+    "name": "getFeeTokensStore",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
     "stateMutability": "view",
@@ -271,43 +328,24 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "_feePayer",
-        "type": "address"
+        "internalType": "uint256",
+        "name": "_txRelayFeePercent",
+        "type": "uint256"
       }
     ],
-    "name": "addTrustedFeePayer",
+    "name": "setTxRelayFeePercent",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_feePayer",
-        "type": "address"
-      }
-    ],
-    "name": "removeTrustedFeePayer",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_feePayer",
-        "type": "address"
-      }
-    ],
-    "name": "hasTrustedFeePayer",
+    "inputs": [],
+    "name": "getTxRelayFeePercent",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "uint256",
         "name": "",
-        "type": "bool"
+        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -369,50 +407,10 @@
     "constant": true
   },
   {
-    "inputs": [],
-    "name": "feeTokens",
-    "outputs": [
-      {
-        "internalType": "address[]",
-        "name": "",
-        "type": "address[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
-        "name": "_feeToken",
-        "type": "address"
-      }
-    ],
-    "name": "addFeeToken",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_feeToken",
-        "type": "address"
-      }
-    ],
-    "name": "removeFeeToken",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "_feeToken",
+        "name": "_token",
         "type": "address"
       }
     ],

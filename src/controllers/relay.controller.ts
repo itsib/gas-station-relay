@@ -18,7 +18,7 @@ export class RelayController {
 
   private readonly _wallet: Wallet;
 
-  private readonly _relayContract: Contract;
+  private readonly _gasStationContract: Contract;
 
   private _swapRouterContract: Contract;
 
@@ -26,26 +26,20 @@ export class RelayController {
     this._minPriorityFeePerGas = BigNumber.from(1e9);
     this._provider = getDefaultProvider(CONFIG.RPC_URL);
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
-    this._relayContract = new Contract(CONFIG.RELAY_CONTRACT_ADDRESS, new Interface(PLASMA_GAS_STATION_ABI), this._wallet);
-    this._relayContract.getRouter().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
+    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, new Interface(PLASMA_GAS_STATION_ABI), this._wallet);
+    this._gasStationContract.getRouter().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
 
     logger.debug(`Fee Payer Wallet ${this._wallet.address}`);
-    logger.debug(`Relay Contract Address ${this._relayContract.address}`);
+    logger.debug(`Relay Contract Address ${this._gasStationContract.address}`);
   }
 
   public async index(req: Request, res: Response, next: NextFunction): Promise<any> {
     try {
-      const [network, txRelayFee, supportedTokens]: [Network, BigNumber, string[]] = await Promise.all([
-        this._provider.getNetwork(),
-        this._relayContract.getTxRelayFee(),
-        this._relayContract.feeTokens(),
-      ]);
+      const network: Network = await this._provider.getNetwork();
 
       return res.json({
         chainId: network.chainId,
-        relayAddress: this._relayContract.address,
-        txRelayFee: txRelayFee.toNumber(),
-        supportedTokens: supportedTokens,
+        gasStationContractAddress: this._gasStationContract.address,
       });
     } catch (error) {
       next(error);
@@ -56,8 +50,8 @@ export class RelayController {
     try {
       const { from, to, value, data, token } = req.body;
       const [relayEstimateGas, txEstimateGas, weth, block, gasPrice]: [BigNumber, BigNumber, string, Block, BigNumber] = await Promise.all([
-        this._relayContract.getEstimateGas(token),
-        this._relayContract.estimateGas.execute(from, to, value, data),
+        this._gasStationContract.getEstimateGas(token),
+        this._gasStationContract.estimateGas.execute(from, to, value, data),
         this._swapRouterContract.WETH(),
         this._provider.getBlock('pending'),
         this._provider.getGasPrice(),
@@ -128,7 +122,7 @@ export class RelayController {
     // We check whether the transaction completes successfully.
     try {
       logger.debug(`Transaction verification by calling eth_call`);
-      await this._relayContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
+      await this._gasStationContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
     } catch (e) {
       const error = parseRpcCallError(e);
       return next(new InternalServerError(error ? error.message : e.message, error || e));
@@ -136,7 +130,7 @@ export class RelayController {
 
     // Send client transaction
     try {
-      const transaction = await this._relayContract.sendTransaction(tx, fee, signature, txOptions);
+      const transaction = await this._gasStationContract.sendTransaction(tx, fee, signature, txOptions);
       logger.debug(`Transaction sent ${transaction.hash}`);
       return res.json({ txHash: transaction.hash });
     } catch (e) {
