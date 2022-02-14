@@ -5,7 +5,7 @@ import { BaseProvider } from '@ethersproject/providers';
 import { BadRequest, InternalServerError } from '@tsed/exceptions';
 import { BigNumber, Contract, getDefaultProvider, Wallet } from 'ethers';
 import { NextFunction, Request, Response } from 'express';
-import PLASMA_GAS_STATION_ABI from '../abi/plasma-gas-station.json';
+import GAS_STATION_ABI from '../abi/gas-station.json';
 import SWAP_ROUTER_ABI from '../abi/swap-router.json';
 import { CONFIG } from '../config';
 import { logger, parseRpcCallError } from '../utils';
@@ -26,8 +26,8 @@ export class RelayController {
     this._minPriorityFeePerGas = BigNumber.from(1e9);
     this._provider = getDefaultProvider(CONFIG.RPC_URL);
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
-    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, new Interface(PLASMA_GAS_STATION_ABI), this._wallet);
-    this._gasStationContract.getRouter().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
+    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, new Interface(GAS_STATION_ABI), this._wallet);
+    this._gasStationContract.router().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
 
     logger.debug(`Fee Payer Wallet ${this._wallet.address}`);
     logger.debug(`Relay Contract Address ${this._gasStationContract.address}`);
