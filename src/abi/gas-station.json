@@ -79,7 +79,7 @@
       {
         "indexed": false,
         "internalType": "uint256",
-        "name": "txRelayFee",
+        "name": "txRelayFeeInEth",
         "type": "uint256"
       }
     ],
@@ -212,20 +212,6 @@
   {
     "inputs": [],
     "name": "maxPostCallGasUsage",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
-    "inputs": [],
-    "name": "maxPreCallGasUsage",
     "outputs": [
       {
         "internalType": "uint256",
@@ -416,19 +402,6 @@
     "inputs": [
       {
         "internalType": "uint256",
-        "name": "_maxPreCallGasUsage",
-        "type": "uint256"
-      }
-    ],
-    "name": "setMaxPreCallGasUsage",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
         "name": "_maxPostCallGasUsage",
         "type": "uint256"
       }
@@ -446,7 +419,7 @@
         "type": "address"
       }
     ],
-    "name": "getEstimateGas",
+    "name": "getEstimatedPostCallGas",
     "outputs": [
       {
         "internalType": "uint256",

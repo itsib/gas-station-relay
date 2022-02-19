@@ -50,7 +50,7 @@ export class RelayController {
     try {
       const { from, to, value, data, token } = req.body;
       const [relayEstimateGas, txEstimateGas, weth, block, gasPrice]: [BigNumber, BigNumber, string, Block, BigNumber] = await Promise.all([
-        this._gasStationContract.getEstimateGas(token),
+        this._gasStationContract.getEstimatedPostCallGas(token),
         this._gasStationContract.estimateGas.execute(from, to, value, data),
         this._swapRouterContract.WETH(),
         this._provider.getBlock('pending'),
