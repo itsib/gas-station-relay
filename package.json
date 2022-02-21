@@ -1,11 +1,11 @@
 {
-  "name": "gsn-relay",
+  "name": "gas-station-relay",
   "version": "1.0.2",
   "description": "Performs transactions for tokens",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/itsib/gsn-relay"
+    "url": "https://github.com/itsib/gas-station-relay"
   },
   "author": "Sergey <itsib.su@gmail.com>",
   "main": "index.js",
