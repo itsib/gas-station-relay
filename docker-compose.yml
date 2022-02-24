@@ -2,8 +2,8 @@ version: '3'
 
 services:
   relay:
-    image: sergeyitsib/gsn-relay:latest
-    container_name: gsn-relay
+    image: sergeyitsib/gas-station-relay:latest
+    container_name: gas-station-relay
     restart: always
     env_file:
       - ./.env

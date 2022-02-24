@@ -48,3 +48,20 @@ To change the project version, use the command:
 ```
 npm run bump
 ```
+### Docker Compose
+```yaml
+version: '3'
+
+services:
+  relay:
+    image: sergeyitsib/gas-station-relay:latest
+    restart: always
+    environment:
+      PORT: '3200'
+      CORS_ORIGIN: '*'
+      RPC_URL: 'https://kovan.infura.io/v3/{{INFURA_API_KEY}}'
+      FEE_PAYER_WALLET_KEY: '0x....'
+      GAS_STATION_CONTRACT_ADDRESS: ''
+    ports:
+      - '3200:3200'
+```
