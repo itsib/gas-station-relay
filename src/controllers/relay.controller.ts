@@ -4,6 +4,7 @@ import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
 import { BadRequest, InternalServerError } from '@tsed/exceptions';
 import { BigNumber, Contract, getDefaultProvider, Wallet } from 'ethers';
+import { formatEther } from 'ethers/lib/utils';
 import { NextFunction, Request, Response } from 'express';
 import GAS_STATION_ABI from '../abi/gas-station.json';
 import SWAP_ROUTER_ABI from '../abi/swap-router.json';
@@ -29,8 +30,16 @@ export class RelayController {
     this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, new Interface(GAS_STATION_ABI), this._wallet);
     this._gasStationContract.router().then(address => this._swapRouterContract = new Contract(address, new Interface(SWAP_ROUTER_ABI), this._wallet));
 
-    logger.debug(`Fee Payer Wallet ${this._wallet.address}`);
-    logger.debug(`Relay Contract Address ${this._gasStationContract.address}`);
+    this._wallet.getBalance('latest')
+      .then(result => {
+        logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
+        logger.debug(`Fee Payer Balance: ${formatEther(result)} ETH`);
+        logger.debug(`Relay Contract Address: ${this._gasStationContract.address}`);
+      })
+      .catch(error => {
+        logger.error('Cannot get fee payer balance');
+        logger.error(error);
+      });
   }
 
   public async index(req: Request, res: Response, next: NextFunction): Promise<any> {
