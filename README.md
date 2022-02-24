@@ -2,7 +2,7 @@
 The relay server pays for gas for the user's transaction, takes ERC 20 tokens.
 
 ### Work Flow Schema:
-![Work Flow Scheme](assets/images/work-flow-schema.png)
+![Work Flow Scheme](assets/images/work-flow-schema-dark.png)
 
 ### Prerequisites
 To build and run this project you need to have the following installed on your system:

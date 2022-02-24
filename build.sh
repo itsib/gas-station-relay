@@ -6,7 +6,7 @@ then
   exit 1
 fi
 
-IMAGE=sergeyitsib/gsn-relay
+IMAGE=sergeyitsib/gas-station-relay
 VERSION=$(git tag --sort=version:refname | tail -1)
 
 docker build -t $IMAGE .
