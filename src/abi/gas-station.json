@@ -3,7 +3,7 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "_router",
+        "name": "_exchange",
         "type": "address"
       },
       {
@@ -36,17 +36,50 @@
       {
         "indexed": true,
         "internalType": "address",
-        "name": "previousOwner",
-        "type": "address"
-      },
-      {
-        "indexed": true,
-        "internalType": "address",
-        "name": "newOwner",
+        "name": "newApprover",
         "type": "address"
       }
     ],
-    "name": "OwnershipTransferred",
+    "name": "GasStationApproverUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newExchange",
+        "type": "address"
+      }
+    ],
+    "name": "GasStationExchangeUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newFeeTokensStore",
+        "type": "address"
+      }
+    ],
+    "name": "GasStationFeeTokensStoreUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newMaxPostCallGasUsage",
+        "type": "uint256"
+      }
+    ],
+    "name": "GasStationMaxPostCallGasUsageUpdated",
     "type": "event"
   },
   {
@@ -83,7 +116,39 @@
         "type": "uint256"
       }
     ],
-    "name": "TransactionExecuted",
+    "name": "GasStationTxExecuted",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "newTxRelayFeePercent",
+        "type": "uint256"
+      }
+    ],
+    "name": "GasStationTxRelayFeePercentUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "previousOwner",
+        "type": "address"
+      },
+      {
+        "indexed": true,
+        "internalType": "address",
+        "name": "newOwner",
+        "type": "address"
+      }
+    ],
+    "name": "OwnershipTransferred",
     "type": "event"
   },
   {
@@ -147,6 +212,20 @@
     "outputs": [
       {
         "internalType": "contract ITokensApprover",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function",
+    "constant": true
+  },
+  {
+    "inputs": [],
+    "name": "exchange",
+    "outputs": [
+      {
+        "internalType": "contract IExchange",
         "name": "",
         "type": "address"
       }
@@ -292,20 +371,6 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "router",
-    "outputs": [
-      {
-        "internalType": "contract ISwapRouter",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function",
-    "constant": true
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
@@ -349,12 +414,12 @@
   {
     "inputs": [
       {
-        "internalType": "contract ISwapRouter",
-        "name": "_router",
+        "internalType": "address",
+        "name": "_exchange",
         "type": "address"
       }
     ],
-    "name": "setRouter",
+    "name": "setExchange",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

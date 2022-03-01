@@ -1,0 +1,65 @@
+[
+  {
+    "inputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "_token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_ethAmount",
+        "type": "uint256"
+      }
+    ],
+    "name": "getEstimatedTokensForETH",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "contract IERC20",
+        "name": "_token",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_receiveEthAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "_tokensMaxSpendAmount",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "_ethReceiver",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "_tokensReceiver",
+        "type": "address"
+      }
+    ],
+    "name": "swapTokensToETH",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  }
+]

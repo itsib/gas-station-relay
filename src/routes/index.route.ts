@@ -1,17 +1,12 @@
-import { Router } from 'express';
-import { IndexController } from '../controllers';
+import express, { Router } from 'express';
+import { resolve } from 'path';
 import { Route } from '../types';
 
 export class IndexRoute implements Route {
-  public path = '/';
-  public router = Router();
-  public controller = new IndexController();
+  public readonly path = '/';
+  public readonly router = Router();
 
   constructor() {
-    this.initializeRoutes();
-  }
-
-  private initializeRoutes() {
-    this.router.get(`${this.path}`, this.controller.index.bind(this.controller));
+    this.router.use(`${this.path}`, express.static(resolve(`${__dirname}/../public`)));
   }
 }
