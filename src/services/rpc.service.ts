@@ -130,23 +130,19 @@ export class RpcService implements Service {
    * @param value
    * @param data
    * @param token
+   * @param pricePerGas
    */
-  public async transactionFee(from: string, to: string, value: string, data: string, token: string): Promise<BigNumber> {
-    const [estimatedGas, block, gasPrice]: [BigNumber, Block, BigNumber] = await Promise.all([
-      this.estimateGas(from, to, value, data, token),
-      this._provider.getBlock('latest'),
-      this._provider.getGasPrice(),
-    ]);
+  public async transactionFee(from: string, to: string, value: string, data: string, token: string, pricePerGas: string): Promise<BigNumber> {
+    const estimatedGas = await this.estimateGas(from, to, value, data, token);
+    const gasLimit = estimatedGas.mul(this._gasLimitMargin.add('100')).div('100');
 
-    const pricePerGas = block.baseFeePerGas ? block.baseFeePerGas.add('3000000000') : gasPrice;
-    const estimatedGasWithMargin = estimatedGas.mul(this._gasLimitMargin.add('100')).div('100');
-    const feeInEth = estimatedGasWithMargin.mul(pricePerGas);
+    const feeInEth = gasLimit.mul(pricePerGas);
     const totalFeeInEth = feeInEth.mul(this._txRelayFeePercent.add('100')).div('100');
 
     try {
       const totalFeeInTokens = await this._exchangeContract.callStatic.getEstimatedTokensForETH(token, totalFeeInEth);
 
-      logger.debug(`Estimated Gas: ${estimatedGasWithMargin.toString()}`);
+      logger.debug(`Gas Limit: ${gasLimit.toString()}`);
       logger.debug(`Transaction Fee: ${utils.formatUnits(feeInEth, 18)} ETH`);
       logger.debug(`Transaction Fee With Plasma Fee: ${utils.formatUnits(totalFeeInEth, 18)} ETH`);
       logger.debug(`Transaction Fee in tokens: ${totalFeeInTokens.toString()}`);
