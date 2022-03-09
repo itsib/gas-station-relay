@@ -134,7 +134,7 @@ export class RpcService implements Service {
   public async transactionFee(from: string, to: string, value: string, data: string, token: string): Promise<BigNumber> {
     const [estimatedGas, block, gasPrice]: [BigNumber, Block, BigNumber] = await Promise.all([
       this.estimateGas(from, to, value, data, token),
-      this._provider.getBlock('pending'),
+      this._provider.getBlock('latest'),
       this._provider.getGasPrice(),
     ]);
 
@@ -167,7 +167,7 @@ export class RpcService implements Service {
    * @param signature
    */
   public async sendTransaction(tx: TxInfo, fee: FeeInfo, signature: string): Promise<string> {
-    const block: Block = await this._provider.getBlock('pending');
+    const block: Block = await this._provider.getBlock('latest');
 
     // EIP-1559 transaction
     if (block.baseFeePerGas) {
