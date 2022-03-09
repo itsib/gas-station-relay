@@ -4,7 +4,7 @@ import { CONFIG } from '../config';
 
 const isDev = CONFIG.NODE_ENV === 'development';
 
-const logSimpleFormat = winston.format.printf(({ timestamp, level, message }) => `${timestamp} ${level}: ${message}`);
+const logSimpleFormat = winston.format.printf(({ level, message }) => `[${chalk.bold(level.toUpperCase())}]: ${message}`);
 
 const logPrettyFormat = winston.format.printf(({ timestamp, level, message }) => {
   const prettyTimestamp = chalk.gray(timestamp);
