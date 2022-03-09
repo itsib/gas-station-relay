@@ -181,9 +181,9 @@ export class RpcService implements Service {
     // We check whether the transaction completes successfully.
     try {
       logger.debug(`Transaction verification by calling eth_call`);
-      logger.debug(tx);
-      logger.debug(fee);
-      logger.debug(txOptions);
+      logger.debug(JSON.stringify(tx, null, '  '));
+      logger.debug(JSON.stringify(fee, null, '  '));
+      logger.debug(JSON.stringify(txOptions, null, '  '));
       await this._gasStationContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
     } catch (e) {
       logger.error(e);
