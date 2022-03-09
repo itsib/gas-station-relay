@@ -173,6 +173,7 @@ export class RpcService implements Service {
     }
 
     const txOptions = {
+      value: tx.value,
       gasLimit: tx.gas,
       ...(block.baseFeePerGas ? { maxFeePerGas: tx.maxFeePerGas, maxPriorityFeePerGas: tx.maxPriorityFeePerGas } : { gasPrice: tx.gasPrice })
     };
