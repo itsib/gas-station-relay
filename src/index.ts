@@ -1,6 +1,6 @@
 import { App } from './app';
 import { IndexRoute, SendTxRoute, EstimateGasRoute, InfoRoute } from './routes';
-import { FeesRouter } from './routes/fees.router';
+import { ExchangeRouter } from './routes/exchange.router';
 import { RpcService } from './services';
 import { Route } from './types';
 import { logger } from './utils';
@@ -33,7 +33,7 @@ async function startApp(): Promise<void> {
     new IndexRoute(),
     new InfoRoute(rpcService),
     new EstimateGasRoute(rpcService),
-    new FeesRouter(rpcService),
+    new ExchangeRouter(rpcService),
     new SendTxRoute(rpcService)
   ];
 

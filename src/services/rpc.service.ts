@@ -30,8 +30,6 @@ export class RpcService implements Service {
   // Commission for the execution of the transaction.
   private _txRelayFeePercent: BigNumber;
 
-  private _gasLimitMargin: BigNumber = BigNumber.from('10');
-
   constructor() {
     this._isInitialized = false;
     this._provider = getDefaultProvider(CONFIG.RPC_URL);
@@ -124,30 +122,13 @@ export class RpcService implements Service {
   }
 
   /**
-   * Returns transaction max fee in tokens.
-   * @param from
-   * @param to
-   * @param value
-   * @param data
+   * Returns the exchange price
    * @param token
-   * @param pricePerGas
+   * @param amount
    */
-  public async transactionFee(from: string, to: string, value: string, data: string, token: string, pricePerGas: string): Promise<BigNumber> {
-    const estimatedGas = await this.estimateGas(from, to, value, data, token);
-    const gasLimit = estimatedGas.mul(this._gasLimitMargin.add('100')).div('100');
-
-    const feeInEth = gasLimit.mul(pricePerGas);
-    const totalFeeInEth = feeInEth.mul(this._txRelayFeePercent.add('100')).div('100');
-
+  public async exchange(token: string, amount: string): Promise<BigNumber> {
     try {
-      const totalFeeInTokens = await this._exchangeContract.callStatic.getEstimatedTokensForETH(token, totalFeeInEth);
-
-      logger.debug(`Gas Limit: ${gasLimit.toString()}`);
-      logger.debug(`Transaction Fee: ${utils.formatUnits(feeInEth, 18)} ETH`);
-      logger.debug(`Transaction Fee With Plasma Fee: ${utils.formatUnits(totalFeeInEth, 18)} ETH`);
-      logger.debug(`Transaction Fee in tokens: ${totalFeeInTokens.toString()}`);
-
-      return totalFeeInTokens;
+      return await this._exchangeContract.callStatic.getEstimatedTokensForETH(token, amount);
     } catch (e) {
       logger.error(e);
       throw new BadRequest('Validation error', [
