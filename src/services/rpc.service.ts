@@ -197,13 +197,13 @@ export class RpcService implements Service {
     };
 
     // We check whether the transaction completes successfully.
-    try {
-      logger.debug(`Transaction verification by calling eth_call`);
-      await this._gasStationContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
-    } catch (e) {
-      const error = parseRpcCallError(e);
-      throw new InternalServerError(error ? error.message : e.message, error || e);
-    }
+    // try {
+    //   logger.debug(`Transaction verification by calling eth_call`);
+    //   await this._gasStationContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
+    // } catch (e) {
+    //   const error = parseRpcCallError(e);
+    //   throw new InternalServerError(error ? error.message : e.message, error || e);
+    // }
 
     // Send client's transaction
     try {
