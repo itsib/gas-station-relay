@@ -6,10 +6,11 @@ import { BadRequest, InternalServerError } from '@tsed/exceptions';
 import { BigNumber, Contract, getDefaultProvider, utils, Wallet } from 'ethers';
 import { formatEther } from 'ethers/lib/utils';
 import EXCHANGE_ABI from '../abi/exchange.json';
+import GAS_STATION_LONDON_ABI from '../abi/gas-station-london.json';
+import GAS_STATION_LEGACY_ABI from '../abi/gas-station-legacy.json';
 import GAS_STATION_TOKENS_STORE_ABI from '../abi/gas-station-tokens-store.json';
-import GAS_STATION_ABI from '../abi/gas-station.json';
 import { CONFIG } from '../config';
-import { FeeInfo, RelayInfo, Service, TxInfo } from '../types';
+import { FeeInfo, RelayInfo, Service, TxInfo, TxType } from '../types';
 import { logger, parseRpcCallError } from '../utils';
 
 export class RpcService implements Service {
@@ -22,7 +23,7 @@ export class RpcService implements Service {
 
   private readonly _wallet: Wallet;
 
-  private readonly _gasStationContract: Contract;
+  private _gasStationContract: Contract;
 
   private _gasStationTokensStoreContract: Contract;
 
@@ -34,7 +35,6 @@ export class RpcService implements Service {
     this._isInitialized = false;
     this._provider = getDefaultProvider(CONFIG.RPC_URL);
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
-    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, new Interface(GAS_STATION_ABI), this._wallet);
   }
 
   async init(): Promise<RpcService> {
@@ -43,6 +43,13 @@ export class RpcService implements Service {
     }
     this._isInitialized = true;
 
+    const block: Block = await this._provider.getBlock('latest');
+    const txType: TxType = block.baseFeePerGas ? TxType.EIP1559 : TxType.LEGACY;
+
+    logger.debug(`Transaction Type: ${txType === TxType.EIP1559 ? 'EIP-1559' : 'Legacy'}`);
+
+    const gasStationInterface = new Interface(txType === TxType.EIP1559 ? GAS_STATION_LONDON_ABI : GAS_STATION_LEGACY_ABI);
+    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, gasStationInterface, this._wallet);
 
     const [exchange, feeTokensStore, feePercent, balance]: [string, string, BigNumber, BigNumber] = await Promise.all([
       this._gasStationContract.exchange(),
