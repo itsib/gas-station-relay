@@ -181,9 +181,6 @@ export class RpcService implements Service {
     // We check whether the transaction completes successfully.
     try {
       logger.debug(`Transaction verification by calling eth_call`);
-      logger.debug(JSON.stringify(tx, null, '  '));
-      logger.debug(JSON.stringify(fee, null, '  '));
-      logger.debug(JSON.stringify(txOptions, null, '  '));
       await this._gasStationContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
     } catch (e) {
       logger.error(e);
@@ -193,6 +190,7 @@ export class RpcService implements Service {
 
     // Send client's transaction
     try {
+      logger.debug(`Transaction sending`);
       const transaction = await this._gasStationContract.sendTransaction(tx, fee, signature, txOptions);
       logger.debug(`Transaction sent ${transaction.hash}`);
       return transaction.hash;
