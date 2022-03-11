@@ -183,7 +183,7 @@ export class RpcService implements Service {
       logger.debug(`Transaction verification by calling eth_call`);
       await this._gasStationContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
     } catch (e) {
-      logger.error(e);
+      console.error(e);
       const error = parseRpcCallError(e);
       throw new InternalServerError(error ? error.message : e.message, error || e);
     }
