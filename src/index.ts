@@ -1,6 +1,5 @@
 import { App } from './app';
-import { IndexRoute, SendTxRoute, EstimateGasRoute, InfoRoute } from './routes';
-import { ExchangeRouter } from './routes/exchange.router';
+import { IndexRoute, SendTxRoute, InfoRoute, TxFeeRouter, EstimateGasRouter } from './routes';
 import { RpcService } from './services';
 import { Route } from './types';
 import { logger } from './utils';
@@ -17,14 +16,12 @@ process.on('unhandledRejection', (e) => {
   process.exit(-1);
 });
 
-try {
-  logger.info('Starting application...');
-  startApp();
-} catch (e) {
+logger.info('Starting application...');
+startApp().catch(e => {
   console.error('Unhandled Error:');
   console.error(e);
   process.exit(-1);
-}
+});
 
 async function startApp(): Promise<void> {
   const rpcService = await new RpcService().init();
@@ -32,9 +29,9 @@ async function startApp(): Promise<void> {
   const routes: Route[] = [
     new IndexRoute(),
     new InfoRoute(rpcService),
-    new EstimateGasRoute(rpcService),
-    new ExchangeRouter(rpcService),
-    new SendTxRoute(rpcService)
+    new TxFeeRouter(rpcService),
+    new SendTxRoute(rpcService),
+    new EstimateGasRouter(rpcService),
   ];
 
   const app = new App(routes);

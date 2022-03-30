@@ -6,7 +6,7 @@ import betterAjvErrors from 'better-ajv-errors';
 
 const ajv = new Ajv({ allErrors: true });
 addFormats(ajv);
-ajv.addFormat('address', /^(0x)?[0-9a-fA-F]{40}$/);
+ajv.addFormat('address', /^(0x)[0-9a-fA-F]{40}$/);
 ajv.addFormat('hex', /^0x[0-9A-Fa-f]*$/);
 
 export const validateMiddleware = (schema: any) => {

@@ -3,21 +3,21 @@ import { Block, Log } from '@ethersproject/abstract-provider';
 import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
 import { BadRequest, InternalServerError } from '@tsed/exceptions';
+import { default as axios } from 'axios';
+import { Big } from 'big.js';
 import { BigNumber, Contract, getDefaultProvider, utils, Wallet } from 'ethers';
 import { formatEther } from 'ethers/lib/utils';
+import get from 'lodash.get';
 import EXCHANGE_ABI from '../abi/exchange.json';
-import GAS_STATION_LONDON_ABI from '../abi/gas-station-london.json';
-import GAS_STATION_LEGACY_ABI from '../abi/gas-station-legacy.json';
-import GAS_STATION_TOKENS_STORE_ABI from '../abi/gas-station-tokens-store.json';
+import GAS_STATION_ABI from '../abi/gas-station.json';
 import { CONFIG } from '../config';
-import { FeeInfo, RelayInfo, Service, TxInfo, TxType } from '../types';
+import { FeeInfo, RelayInfo, Service, TxInfo } from '../types';
 import { logger, parseRpcCallError } from '../utils';
+import { getGasSettings } from '../utils/get-gas-settings';
 
 export class RpcService implements Service {
 
   private _isInitialized: boolean;
-
-  private readonly _minPriorityFeePerGas = BigNumber.from(1e9);
 
   private readonly _provider: BaseProvider;
 
@@ -25,11 +25,9 @@ export class RpcService implements Service {
 
   private _gasStationContract: Contract;
 
-  private _gasStationTokensStoreContract: Contract;
-
   private _exchangeContract: Contract;
   // Commission for the execution of the transaction.
-  private _txRelayFeePercent: BigNumber;
+  private _txRelayFeePercent: string;
 
   constructor() {
     this._isInitialized = false;
@@ -42,32 +40,22 @@ export class RpcService implements Service {
       return this;
     }
     this._isInitialized = true;
+    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, GAS_STATION_ABI, this._wallet);
 
-    const block: Block = await this._provider.getBlock('latest');
-    const txType: TxType = block.baseFeePerGas ? TxType.EIP1559 : TxType.LEGACY;
-
-    logger.debug(`Transaction Type: ${txType === TxType.EIP1559 ? 'EIP-1559' : 'Legacy'}`);
-
-    const gasStationInterface = new Interface(txType === TxType.EIP1559 ? GAS_STATION_LONDON_ABI : GAS_STATION_LEGACY_ABI);
-    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, gasStationInterface, this._wallet);
-
-    const [exchange, feeTokensStore, feePercent, balance]: [string, string, BigNumber, BigNumber] = await Promise.all([
+    const [exchange, feePercent, balance]: [string, BigNumber, BigNumber] = await Promise.all([
       this._gasStationContract.exchange(),
-      this._gasStationContract.feeTokensStore(),
       this._gasStationContract.txRelayFeePercent(),
       this._wallet.getBalance('latest'),
     ]);
 
-    this._gasStationTokensStoreContract = new Contract(feeTokensStore, new Interface(GAS_STATION_TOKENS_STORE_ABI), this._wallet);
-    this._exchangeContract = new Contract(exchange, new Interface(EXCHANGE_ABI), this._wallet);
-    this._txRelayFeePercent = feePercent;
+    this._txRelayFeePercent = feePercent.toString();
+    this._exchangeContract = new Contract(exchange, EXCHANGE_ABI, this._wallet);
 
     logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
     logger.debug(`Fee Payer Balance: ${formatEther(balance)} ETH`);
     logger.debug(`Gas Station Contract: ${this._gasStationContract.address}`);
-    logger.debug(`Gas Station Tokens Store Contract: ${this._gasStationTokensStoreContract.address}`);
     logger.debug(`Exchange Contract: ${this._exchangeContract.address}`);
-    logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent.toString()}%`);
+    logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent}%`);
 
     // Subscribe to change contract state events
     const address = this._gasStationContract.address;
@@ -78,16 +66,10 @@ export class RpcService implements Service {
       logger.debug(`Exchange Contract was updated: ${newExchange}`);
     });
 
-    this._provider.on({ address, topics: [utils.id('GasStationFeeTokensStoreUpdated(address)')] }, (log: Log) => {
-      const { args: { newFeeTokensStore } } = this._gasStationContract.interface.parseLog(log);
-      this._gasStationTokensStoreContract = new Contract(newFeeTokensStore, new Interface(GAS_STATION_TOKENS_STORE_ABI), this._wallet);
-      logger.debug(`Gas Station Tokens Store Contract was updated: ${newFeeTokensStore}`);
-    });
-
     this._provider.on({ address, topics: [utils.id('GasStationTxRelayFeePercentUpdated(uint256)')] }, (log: Log) => {
       const { args: { newTxRelayFeePercent } } = this._gasStationContract.interface.parseLog(log);
-      this._txRelayFeePercent = newTxRelayFeePercent;
-      logger.debug(`Tx Relay Fee Percent was updated: ${newTxRelayFeePercent.toString()}%`);
+      this._txRelayFeePercent = newTxRelayFeePercent.toString();
+      logger.debug(`Tx Relay Fee Percent was updated: ${this._txRelayFeePercent}%`);
     });
 
     return this;
@@ -97,16 +79,16 @@ export class RpcService implements Service {
    * Common relay info
    */
   public async relayInfo(): Promise<RelayInfo> {
-    const [network, exchange, balance]: [Network, string, BigNumber] = await Promise.all([
+    const [network, balance, feeTokens]: [Network, BigNumber, string[]] = await Promise.all([
       this._provider.getNetwork(),
-      this._gasStationContract.exchange(),
-      this._wallet.getBalance('latest')
+      this._wallet.getBalance('latest'),
+      this._gasStationContract.feeTokens(),
     ]);
 
     return {
       chainId: network.chainId,
       gasStation: this._gasStationContract.address,
-      exchange: exchange,
+      feeTokens: feeTokens,
       balance: balance.toString(),
     }
   }
@@ -115,33 +97,39 @@ export class RpcService implements Service {
    * Calculate estimated gas for transaction relay
    * @param from
    * @param to
-   * @param value
    * @param data
    * @param token
    */
-  public async estimateGas(from: string, to: string, value: string, data: string, token: string): Promise<BigNumber> {
+  public async estimateGas(from: string, to: string, data: string, token: string): Promise<string> {
     const [relayEstimateGas, txEstimateGas]: [BigNumber, BigNumber] = await Promise.all([
       this._gasStationContract.getEstimatedPostCallGas(token),
-      this._gasStationContract.estimateGas.execute(from, to, value, data),
+      this._gasStationContract.estimateGas.execute(from, to, data),
     ]);
 
-    return relayEstimateGas.add(txEstimateGas);
+    return Big(relayEstimateGas.add(txEstimateGas).toString())
+      .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
+      .toFixed(0);
   }
 
   /**
-   * Returns the exchange price
+   * Calculate cost of transaction
+   * @param from
+   * @param to
+   * @param data
    * @param token
-   * @param amount
    */
-  public async exchange(token: string, amount: string): Promise<BigNumber> {
-    try {
-      return await this._exchangeContract.callStatic.getEstimatedTokensForETH(token, amount);
-    } catch (e) {
-      logger.error(e);
-      throw new BadRequest('Validation error', [
-        { field: '/token', message: 'No liquidity for exchange fee tokens' },
-      ]);
-    }
+  public async transactionFee(from: string, to: string, data: string, token: string): Promise<string> {
+    const [estimateGas, feePerGas]: [string, string] = await Promise.all([
+      this.estimateGas(from, to, data, token),
+      this._getFeePerGas(),
+    ]);
+
+    const feeInEth = Big(estimateGas)
+      .times(feePerGas)
+      .times(Big(this._txRelayFeePercent).div(100).add(1))
+      .toFixed(0);
+
+    return await this._toTokens(feeInEth, token);
   }
 
   /**
@@ -151,44 +139,28 @@ export class RpcService implements Service {
    * @param signature
    */
   public async sendTransaction(tx: TxInfo, fee: FeeInfo, signature: string): Promise<string> {
-    const block: Block = await this._provider.getBlock('latest');
+    const [block, feePerGas]: [Block, string] = await Promise.all([
+      this._provider.getBlock('latest'),
+      this._getFeePerGas(),
+    ]);
 
-    // EIP-1559 transaction
-    if (block.baseFeePerGas) {
-      const minFeePerGas = block.baseFeePerGas.add(this._minPriorityFeePerGas);
-
-      // Check gas price fields
-      if (this._minPriorityFeePerGas.gt(tx.maxPriorityFeePerGas || 0)) {
-        throw new BadRequest('Validation error', [
-          { field: '/tx/maxPriorityFeePerGas', message: 'The maxPriorityFeePerGas value is too small' },
-        ]);
-      }
-      if (minFeePerGas.gt(tx.maxFeePerGas || 0)) {
-        throw new BadRequest('Validation error', [
-          { field: '/tx/maxFeePerGas', message: 'The maxFeePerGas value is too small' },
-        ])
-      }
-    }
-    // Legacy transaction
-    else {
-      const minGasPrice = await this._provider.getGasPrice();
-      if (minGasPrice.gt(tx.gasPrice || 0)) {
-        throw new BadRequest('Validation error', [
-          { field: '/tx/gasPrice', message: 'The gasPrice value is too small' },
-        ]);
-      }
-    }
+    const gasOptions = block.baseFeePerGas ? {
+      maxFeePerGas: Big(feePerGas).add(1).toString(),
+      maxPriorityFeePerGas: feePerGas,
+    } : {
+      gasPrice: feePerGas,
+    };
 
     const txOptions = {
-      value: tx.value,
+      value: '0',
       gasLimit: tx.gas,
-      ...(block.baseFeePerGas ? { maxFeePerGas: tx.maxFeePerGas, maxPriorityFeePerGas: tx.maxPriorityFeePerGas } : { gasPrice: tx.gasPrice })
+      ...gasOptions,
     };
 
     // We check whether the transaction completes successfully.
     try {
       logger.debug(`Transaction verification by calling eth_call`);
-      await this._gasStationContract.callStatic.sendTransaction(tx, fee, signature, txOptions);
+      await this._gasStationContract.callStatic.sendTransaction(tx, { ...fee, feePerGas }, signature, txOptions);
     } catch (e) {
       console.error(e);
       const error = parseRpcCallError(e);
@@ -198,11 +170,75 @@ export class RpcService implements Service {
     // Send client's transaction
     try {
       logger.debug(`Transaction sending`);
-      const transaction = await this._gasStationContract.sendTransaction(tx, fee, signature, txOptions);
+      const transaction = await this._gasStationContract.sendTransaction(tx, { ...fee, feePerGas }, signature, txOptions);
       logger.debug(`Transaction sent ${transaction.hash}`);
       return transaction.hash;
     } catch (e) {
       throw new InternalServerError(e.message, e);
+    }
+  }
+
+  /**
+   * Returns the exchange price
+   * @param ethAmount
+   * @param toTokens
+   */
+  private async _toTokens(ethAmount: string, toTokens: string): Promise<string> {
+    try {
+      const tokensAmount = await this._exchangeContract.callStatic.getEstimatedTokensForETH(toTokens, ethAmount);
+      return tokensAmount.toString();
+    } catch (e) {
+      logger.error(e);
+      throw new BadRequest('Validation error', [
+        { field: '/token', message: 'No liquidity for exchange fee tokens' },
+      ]);
+    }
+  }
+
+  /**
+   * Get and calculate fee per gas
+   * @private
+   */
+  private async _getFeePerGas(): Promise<string> {
+    // Try to get gas price from external gas station.
+    if (CONFIG.EXTERNAL_GAS_STATION_URL) {
+      let data: any;
+
+      try {
+        const result = await axios.request({
+          url: CONFIG.EXTERNAL_GAS_STATION_URL,
+          method: CONFIG.EXTERNAL_GAS_STATION_METHOD,
+          headers: {
+            'content-type': 'application/json; charset=utf-8',
+          },
+        });
+        data = result.data;
+      } catch (e) {
+        logger.error(e);
+        throw new Error('Gas price fetch error');
+      }
+
+      try {
+        const rawValue = get(data, CONFIG.EXTERNAL_GAS_STATION_VALUE_PLACE);
+        const decValue = CONFIG.EXTERNAL_GAS_STATION_VALUE_BASE === 'HEX' ? parseInt(rawValue, 16) : parseFloat(rawValue);
+        return Big(decValue)
+          .times(Big(10).pow(Number(CONFIG.EXTERNAL_GAS_STATION_VALUE_DECIMALS)))
+          .times(CONFIG.FEE_PER_GAS_MULTIPLIER)
+          .toFixed(0);
+      } catch (e) {
+        logger.error(e);
+        throw new Error('Gas price parse error');
+      }
+    }
+    // Calculate gas price by blockchain
+    else {
+      const gasSettings = await getGasSettings(this._provider as any);
+
+      if ('maxFeePerGas' in gasSettings) {
+        return Big(gasSettings.maxFeePerGas.toString()).times(CONFIG.FEE_PER_GAS_MULTIPLIER).toString();
+      } else {
+        return Big(gasSettings.gasPrice.toString()).times(CONFIG.FEE_PER_GAS_MULTIPLIER).toString();
+      }
     }
   }
 }

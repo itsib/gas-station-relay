@@ -5,17 +5,13 @@ export const POST_SEND_TRANSACTION_SCHEMA = {
   properties: {
     tx: {
       type: 'object',
-      required: ['from', 'to', 'data', 'gas', 'nonce', 'value', 'deadline'],
+      required: ['from', 'to', 'gas', 'nonce', 'deadline', 'data'],
       properties: {
         from: {
           type: 'string',
           format: 'hex',
         },
         to: {
-          type: 'string',
-          format: 'hex',
-        },
-        data: {
           type: 'string',
           format: 'hex',
         },
@@ -27,35 +23,15 @@ export const POST_SEND_TRANSACTION_SCHEMA = {
           type: 'string',
           pattern: '^[0-9]+$',
         },
-        value: {
-          type: 'string',
-          pattern: '^[0-9]+$',
-        },
         deadline: {
           type: 'string',
           pattern: '^[0-9]+$',
         },
-        maxFeePerGas: {
+        data: {
           type: 'string',
-          pattern: '^[0-9]+$',
-        },
-        maxPriorityFeePerGas: {
-          type: 'string',
-          pattern: '^[0-9]+$',
-        },
-        gasPrice: {
-          type: 'string',
-          pattern: '^[0-9]+$',
+          format: 'hex',
         },
       },
-      oneOf: [
-        {
-          required: ['maxFeePerGas', 'maxPriorityFeePerGas']
-        },
-        {
-          required: ['gasPrice']
-        },
-      ],
       additionalProperties: false,
     },
     fee: {

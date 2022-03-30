@@ -1,8 +1,8 @@
-export const POST_ESTIMATE_GAS_SCHEMA = {
-  title: 'Estimate gas request',
-  description: 'The fields required to calculate the gas that will be required to complete the transaction.',
+export const POST_TX_FEE_SCHEMA = {
+  title: 'Transaction fee request',
+  description: 'The fields required to calculate the transaction cost that will be required to complete the transaction.',
   type: 'object',
-  required: ['from', 'to', 'value', 'data', 'token'],
+  required: ['from', 'to', 'data', 'token'],
   properties: {
     from: {
       type: 'string',
@@ -11,10 +11,6 @@ export const POST_ESTIMATE_GAS_SCHEMA = {
     to: {
       type: 'string',
       format: 'address',
-    },
-    value: {
-      type: 'string',
-      pattern: '^[0-9]+$',
     },
     data: {
       type: 'string',

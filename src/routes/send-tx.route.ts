@@ -3,7 +3,6 @@ import { validateMiddleware } from '../middlewares';
 import { POST_SEND_TRANSACTION_SCHEMA } from '../schemas/post-send-transaction';
 import { RpcService } from '../services';
 import { Route } from '../types';
-import { logger } from '../utils';
 
 export class SendTxRoute implements Route {
   public path = '/send-tx';
