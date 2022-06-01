@@ -1,10 +1,10 @@
-FROM node:14 AS dist
+FROM node:16 AS dist
 COPY package.json package-lock.json ./
 RUN npm install
 COPY . ./
 RUN npm run build
 
-FROM node:14-alpine
+FROM node:16-alpine
 WORKDIR /app
 COPY --from=dist build /app/
 COPY --from=dist node_modules /app/node_modules
