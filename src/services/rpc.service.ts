@@ -7,17 +7,25 @@ import { default as axios } from 'axios';
 import { Big } from 'big.js';
 import { BigNumber, Contract, getDefaultProvider, utils, Wallet } from 'ethers';
 import { formatEther } from 'ethers/lib/utils';
+import { injectable } from 'inversify';
 import get from 'lodash.get';
 import EXCHANGE_ABI from '../abi/exchange.json';
 import GAS_STATION_ABI from '../abi/gas-station.json';
 import { CONFIG } from '../config';
-import { FeeInfo, RelayInfo, Service, TxInfo } from '../types';
-import { logger, parseRpcCallError } from '../utils';
-import { getGasSettings } from '../utils/get-gas-settings';
+import { FeeInfo, RelayInfo, TxInfo } from '../types';
+import { logger, parseRpcCallError, getGasSettings } from '../utils';
 
-export class RpcService implements Service {
+export interface IRpcService {
+  relayInfo: () => Promise<RelayInfo>;
+  estimateGas: (from: string, to: string, data: string, token: string) => Promise<string>;
+  transactionFee: (from: string, to: string, data: string, token: string) => Promise<string>;
+  sendTransaction: (tx: TxInfo, fee: FeeInfo, signature: string) => Promise<string>;
+}
 
-  private _isInitialized: boolean;
+@injectable()
+export class RpcService implements IRpcService {
+
+  private readonly _initialization: Promise<void>;
 
   private readonly _provider: BaseProvider;
 
@@ -30,55 +38,54 @@ export class RpcService implements Service {
   private _txRelayFeePercent: string;
 
   constructor() {
-    this._isInitialized = false;
     this._provider = getDefaultProvider(CONFIG.RPC_URL);
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
-  }
 
-  async init(): Promise<RpcService> {
-    if (this._isInitialized) {
-      return this;
-    }
-    this._isInitialized = true;
-    this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, GAS_STATION_ABI, this._wallet);
+    this._initialization = new Promise(async (resolve: () => void) => {
+      logger.debug(`RPC Service initialization...`);
 
-    const [exchange, feePercent, balance]: [string, BigNumber, BigNumber] = await Promise.all([
-      this._gasStationContract.exchange(),
-      this._gasStationContract.txRelayFeePercent(),
-      this._wallet.getBalance('latest'),
-    ]);
+      this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, GAS_STATION_ABI, this._wallet);
 
-    this._txRelayFeePercent = feePercent.toString();
-    this._exchangeContract = new Contract(exchange, EXCHANGE_ABI, this._wallet);
+      const [exchange, feePercent, balance]: [string, BigNumber, BigNumber] = await Promise.all([
+        this._gasStationContract.exchange(),
+        this._gasStationContract.txRelayFeePercent(),
+        this._wallet.getBalance('latest'),
+      ]);
 
-    logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
-    logger.debug(`Fee Payer Balance: ${formatEther(balance)} ETH`);
-    logger.debug(`Gas Station Contract: ${this._gasStationContract.address}`);
-    logger.debug(`Exchange Contract: ${this._exchangeContract.address}`);
-    logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent}%`);
+      this._txRelayFeePercent = feePercent.toString();
+      this._exchangeContract = new Contract(exchange, EXCHANGE_ABI, this._wallet);
 
-    // Subscribe to change contract state events
-    const address = this._gasStationContract.address;
+      logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
+      logger.debug(`Fee Payer Balance: ${formatEther(balance)} ETH`);
+      logger.debug(`Gas Station Contract: ${this._gasStationContract.address}`);
+      logger.debug(`Exchange Contract: ${this._exchangeContract.address}`);
+      logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent}%`);
 
-    this._provider.on({ address, topics: [utils.id('GasStationExchangeUpdated(address)')] }, (log: Log) => {
-      const { args: { newExchange } } = this._gasStationContract.interface.parseLog(log);
-      this._exchangeContract = new Contract(newExchange, new Interface(EXCHANGE_ABI), this._wallet);
-      logger.debug(`Exchange Contract was updated: ${newExchange}`);
+      // Subscribe to change contract state events
+      const address = this._gasStationContract.address;
+
+      this._provider.on({ address, topics: [utils.id('GasStationExchangeUpdated(address)')] }, (log: Log) => {
+        const { args: { newExchange } } = this._gasStationContract.interface.parseLog(log);
+        this._exchangeContract = new Contract(newExchange, new Interface(EXCHANGE_ABI), this._wallet);
+        logger.debug(`Exchange Contract was updated: ${newExchange}`);
+      });
+
+      this._provider.on({ address, topics: [utils.id('GasStationTxRelayFeePercentUpdated(uint256)')] }, (log: Log) => {
+        const { args: { newTxRelayFeePercent } } = this._gasStationContract.interface.parseLog(log);
+        this._txRelayFeePercent = newTxRelayFeePercent.toString();
+        logger.debug(`Tx Relay Fee Percent was updated: ${this._txRelayFeePercent}%`);
+      });
+
+      resolve();
     });
-
-    this._provider.on({ address, topics: [utils.id('GasStationTxRelayFeePercentUpdated(uint256)')] }, (log: Log) => {
-      const { args: { newTxRelayFeePercent } } = this._gasStationContract.interface.parseLog(log);
-      this._txRelayFeePercent = newTxRelayFeePercent.toString();
-      logger.debug(`Tx Relay Fee Percent was updated: ${this._txRelayFeePercent}%`);
-    });
-
-    return this;
   }
 
   /**
    * Common relay info
    */
   public async relayInfo(): Promise<RelayInfo> {
+    await this._initialization;
+
     const [network, balance, feeTokens]: [Network, BigNumber, string[]] = await Promise.all([
       this._provider.getNetwork(),
       this._wallet.getBalance('latest'),
@@ -101,6 +108,8 @@ export class RpcService implements Service {
    * @param token
    */
   public async estimateGas(from: string, to: string, data: string, token: string): Promise<string> {
+    await this._initialization;
+
     const [relayEstimateGas, txEstimateGas]: [BigNumber, BigNumber] = await Promise.all([
       this._gasStationContract.getEstimatedPostCallGas(token),
       this._gasStationContract.estimateGas.execute(from, to, data),
@@ -119,6 +128,8 @@ export class RpcService implements Service {
    * @param token
    */
   public async transactionFee(from: string, to: string, data: string, token: string): Promise<string> {
+    await this._initialization;
+
     const [estimateGas, feePerGas]: [string, string] = await Promise.all([
       this.estimateGas(from, to, data, token),
       this._getFeePerGas(),
@@ -139,6 +150,8 @@ export class RpcService implements Service {
    * @param signature
    */
   public async sendTransaction(tx: TxInfo, fee: FeeInfo, signature: string): Promise<string> {
+    await this._initialization;
+
     const [block, feePerGas]: [Block, string] = await Promise.all([
       this._provider.getBlock('latest'),
       this._getFeePerGas(),

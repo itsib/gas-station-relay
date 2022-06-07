@@ -31,7 +31,10 @@
     "eip1559-fee-suggestions-ethers": "^1.3.3",
     "ethers": "^5.5.3",
     "express": "^4.17.2",
+    "inversify": "^6.0.1",
+    "inversify-express-utils": "^6.4.3",
     "lodash.get": "^4.4.2",
+    "reflect-metadata": "^0.1.13",
     "winston": "^3.4.0"
   },
   "devDependencies": {

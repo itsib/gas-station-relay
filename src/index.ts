@@ -1,7 +1,11 @@
-import { App } from './app';
-import { IndexRoute, SendTxRoute, InfoRoute, TxFeeRouter, EstimateGasRouter } from './routes';
-import { RpcService } from './services';
-import { Route } from './types';
+import { NotFound } from '@tsed/exceptions';
+import compression from 'compression';
+import cors from 'cors';
+import express, { Application, Router } from 'express';
+import { resolve } from 'path';
+import { CONFIG } from './config';
+import { serverFactory } from './ioc/server';
+import { errorMiddleware, httpLogMiddleware } from './middlewares';
 import { logger } from './utils';
 
 process.on('uncaughException', (e) => {
@@ -17,6 +21,7 @@ process.on('unhandledRejection', (e) => {
 });
 
 logger.info('Starting application...');
+
 startApp().catch(e => {
   console.error('Unhandled Error:');
   console.error(e);
@@ -24,17 +29,33 @@ startApp().catch(e => {
 });
 
 async function startApp(): Promise<void> {
-  const rpcService = await new RpcService().init();
+  const rootRouter = Router();
+  rootRouter.use('/', express.static(resolve(`${__dirname}/public`)));
 
-  const routes: Route[] = [
-    new IndexRoute(),
-    new InfoRoute(rpcService),
-    new TxFeeRouter(rpcService),
-    new SendTxRoute(rpcService),
-    new EstimateGasRouter(rpcService),
-  ];
+  const server = serverFactory(rootRouter);
 
-  const app = new App(routes);
+  server.setConfig((app: Application) => {
+    app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
+    app.use(compression());
+    app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
+    app.use(httpLogMiddleware);
+  });
 
-  app.listen();
+  server.setErrorConfig((app: Application) => {
+    // Handle not found error
+    app.use('/*', () => {
+      throw new NotFound('Route not found');
+    });
+
+    // Catch and handle all errors
+    app.use(errorMiddleware);
+  });
+
+  const app = server.build();
+  app.listen(CONFIG.PORT, () => {
+    logger.info(`ENV: ${CONFIG.NODE_ENV}`);
+    logger.info(`LOG_LEVEL: ${CONFIG.LOG_LEVEL}`);
+    logger.info(`App listening on the port ${CONFIG.PORT}`);
+  });
 }
