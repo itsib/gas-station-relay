@@ -10,13 +10,15 @@
   "author": "Sergey <itsib.su@gmail.com>",
   "main": "index.js",
   "scripts": {
-    "build": "tsc",
-    "build:docker": "tsc && ./build.sh",
+    "build": "npm run clean && tsc && npm run copy",
+    "build:docker": "npm run build && ./build.sh",
     "start": "node ./index.js",
     "dev": "ts-node ./src/index.ts",
     "dev:watch": "nodemon",
     "bump": "./node_modules/.bin/bump --tag --push --all",
-    "doc": "node ./render-doc.js"
+    "doc": "node ./render-doc.js",
+    "clean": "rm -rf ./build",
+    "copy": "cp -r src/public/ build/public/"
   },
   "dependencies": {
     "@tsed/exceptions": "^6.98.1",
