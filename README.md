@@ -21,8 +21,6 @@ To build and run this project you need to have the following installed on your s
 - **RPC_URL** - (Required) The URL to a node on the network you wish to use. If you do not know what to put here, get a free [Infura account](https://infura.io/), create a project, and look at KEYS > ENDPOINTS for your network. Use the endpoint that starts with https://
 - **FEE_PAYER_WALLET_KEY** - (Required) The private key of the wallet from which the transaction fee will be paid. And where the bonus will be credited for relaying  the transaction. There should be a positive ETH balance.
 - **GAS_STATION_CONTRACT_ADDRESS** - (Required) The address of the contract that performs the transaction. The whole logic of the fee calculation, signature verification, execution of a user transaction.
-#### Gas price settings:
-- **DEFAULT_FEE_PER_GAS** - The default priority fee for EIP-1559 or the gas price for legacy, in WEI. By default: *3000000000*.
 
 ### Development
 Before starting the server, you need to create a .env file and add the required environment variables there:

@@ -1,7 +1,8 @@
 import { NextFunction, Request, Response } from 'express';
 import { inject } from 'inversify';
 import { controller, httpPost, interfaces, next, request, response } from 'inversify-express-utils';
-import { POST_SEND_TRANSACTION_SCHEMA } from '../schemas/post-send-transaction';
+import { POST_ESTIMATE_GAS_SCHEMA } from '../schemas/post-estimate-gas.schema';
+import { POST_SEND_TRANSACTION_SCHEMA } from '../schemas/post-send-transaction.schema';
 import { POST_TX_FEE_SCHEMA } from '../schemas/post-tx-fee.schema';
 import { RpcService } from '../services';
 import { validatorMiddlewareFactory } from '../utils';
@@ -20,9 +21,8 @@ export class TxController implements interfaces.Controller {
    */
   @httpPost('/fee', validatorMiddlewareFactory(POST_TX_FEE_SCHEMA))
   async postFee(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const fee = await this._rpcService.transactionFee(req.body.from, req.body.to, req.body.data, req.body.token);
-
-    return res.json({ fee });
+    const txFee = await this._rpcService.transactionFee(req.body.from, req.body.to, req.body.data, req.body.value, req.body.feePerGas, req.body.token);
+    return res.json(txFee);
   }
 
   /**
@@ -31,9 +31,9 @@ export class TxController implements interfaces.Controller {
    * @param res
    * @param nextFn
    */
-  @httpPost('/estimate-gas', validatorMiddlewareFactory(POST_TX_FEE_SCHEMA))
+  @httpPost('/estimate-gas', validatorMiddlewareFactory(POST_ESTIMATE_GAS_SCHEMA))
   async postEstimateGas(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const estimateGas = await this._rpcService.estimateGas(req.body.from, req.body.to, req.body.data, req.body.token);
+    const estimateGas = await this._rpcService.estimateGas(req.body.from, req.body.to, req.body.data, req.body.value, req.body.token);
 
     return res.json({ estimateGas });
   }

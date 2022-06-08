@@ -16,12 +16,6 @@ export const CONFIG = {
   RPC_URL: required(process.env.RPC_URL, 'The environment variable RPC_URL is not set.'),
   FEE_PAYER_WALLET_KEY: required(process.env.FEE_PAYER_WALLET_KEY, 'The environment variable FEE_PAYER_WALLET_KEY is not set.'),
   GAS_STATION_CONTRACT_ADDRESS: required(process.env.GAS_STATION_CONTRACT_ADDRESS, 'The environment variable GAS_STATION_CONTRACT_ADDRESS is not set.'),
-  // Gas price settings
-  EXTERNAL_GAS_STATION_URL: process.env.EXTERNAL_GAS_STATION_URL,
-  EXTERNAL_GAS_STATION_METHOD: validateEnum<Method>(['GET', 'DELETE', 'HEAD', 'OPTIONS', 'POST', 'PUT', 'PATCH', 'PURGE', 'LINK', 'UNLINK'], process.env.EXTERNAL_GAS_STATION_METHOD, 'GET'),
-  EXTERNAL_GAS_STATION_VALUE_BASE: validateEnum<BaseOfNumber>(['HEX', 'DEC'], process.env.EXTERNAL_GAS_STATION_VALUE_BASE, 'DEC'),
-  EXTERNAL_GAS_STATION_VALUE_DECIMALS: validateInteger(process.env.EXTERNAL_GAS_STATION_VALUE_DECIMALS, '0'),
-  EXTERNAL_GAS_STATION_VALUE_PLACE: process.env.EXTERNAL_GAS_STATION_VALUE_PLACE || '',
   // Gas multipliers
   FEE_PER_GAS_MULTIPLIER: Number(process.env.FEE_PER_GAS_MULTIPLIER) || 1,
   ESTIMATE_GAS_MULTIPLIER: Number(process.env.ESTIMATE_GAS_MULTIPLIER) || 1,

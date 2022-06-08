@@ -3,22 +3,26 @@ import { Block, Log } from '@ethersproject/abstract-provider';
 import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
 import { BadRequest, InternalServerError } from '@tsed/exceptions';
-import { default as axios } from 'axios';
 import { Big } from 'big.js';
 import { BigNumber, Contract, utils, Wallet } from 'ethers';
-import { formatEther } from 'ethers/lib/utils';
+import { formatEther, hexlify } from 'ethers/lib/utils';
 import { inject, injectable } from 'inversify';
-import get from 'lodash.get';
 import EXCHANGE_ABI from '../abi/exchange.json';
+import GAS_PRICE_ORACLE_ABI from '../abi/gas-price-oracle.json';
 import GAS_STATION_ABI from '../abi/gas-station.json';
+import RECIPIENT_ABI from '../abi/recipient.json';
 import { CONFIG } from '../config';
 import { FeeInfo, RelayInfo, TxInfo } from '../types';
-import { logger, parseRpcCallError, getGasSettings } from '../utils';
+import { isAddress, logger, parseRpcCallError } from '../utils';
+import { GasService } from './gas.service';
+
+const APPROVE_METHOD_HASH = '0x095ea7b3';
+const RECIPIENT_INTERFACE = new Interface(RECIPIENT_ABI as any);
 
 export interface IRpcService {
   relayInfo: () => Promise<RelayInfo>;
   estimateGas: (from: string, to: string, data: string, token: string) => Promise<string>;
-  transactionFee: (from: string, to: string, data: string, token: string) => Promise<string>;
+  transactionFee: (from: string, to: string, data: string, value: string, feePerGas: string, token?: string) => Promise<{ fee: string; currency: string }>;
   sendTransaction: (tx: TxInfo, fee: FeeInfo, signature: string) => Promise<string>;
 }
 
@@ -26,17 +30,41 @@ export interface IRpcService {
 export class RpcService implements IRpcService {
 
   private readonly _initialization: Promise<void>;
-
+  /**
+   * Fee payer wallet
+   * @private
+   */
   private readonly _wallet: Wallet;
-
+  /**
+   * Saved addresses of contracts that support the pay fee with tokens
+   * @private
+   */
+  private readonly _gasStationSupports: { [address: string]: Promise<boolean> };
+  /**
+   * Used for fee calculation in Optimism network
+   * @private
+   */
+  private _gasPriceOracleContract: Contract;
+  /**
+   * A contract that directly executes the transaction and exchanges fee tokens for ETH
+   * @private
+   */
   private _gasStationContract: Contract;
-
+  /**
+   * Contract to exchange fee tokens to native currency
+   * @private
+   */
   private _exchangeContract: Contract;
-  // Commission for the execution of the transaction.
+  /**
+   * Commission for the execution of the transaction.
+   * @private
+   */
   private _txRelayFeePercent: string;
 
-  constructor(@inject('BaseProvider') private _provider: BaseProvider) {
+  constructor(@inject('BaseProvider') private _provider: BaseProvider, @inject('GasService') private _gasService: GasService) {
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
+    this._gasPriceOracleContract = new Contract('0x420000000000000000000000000000000000000f', GAS_PRICE_ORACLE_ABI, this._provider);
+    this._gasStationSupports = {};
 
     this._initialization = new Promise(async (resolve: () => void) => {
       logger.debug(`RPC Service initialization...`);
@@ -102,19 +130,31 @@ export class RpcService implements IRpcService {
    * @param from
    * @param to
    * @param data
+   * @param value
    * @param token
    */
-  public async estimateGas(from: string, to: string, data: string, token: string): Promise<string> {
+  public async estimateGas(from: string, to: string, data: string, value: string, token?: string): Promise<string> {
     await this._initialization;
 
-    const [relayEstimateGas, txEstimateGas]: [BigNumber, BigNumber] = await Promise.all([
-      this._gasStationContract.getEstimatedPostCallGas(token),
-      this._gasStationContract.estimateGas.execute(from, to, data),
-    ]);
+    // Estimate gas with gas station
+    if (token && await this._hasSupportFeeInTokens(to, data, value)) {
+      const [relayEstimateGas, txEstimateGas]: [BigNumber, BigNumber] = await Promise.all([
+        this._gasStationContract.getEstimatedPostCallGas(token),
+        this._gasStationContract.estimateGas.execute(from, to, data),
+      ]);
 
-    return Big(relayEstimateGas.add(txEstimateGas).toString())
-      .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
-      .toFixed(0);
+      return Big(relayEstimateGas.add(txEstimateGas).toString())
+        .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
+        .toFixed(0);
+    }
+    // Common estimate gas
+    else {
+      const estimateGas = await this._provider.estimateGas({ from, to, data, value });
+
+      return Big(estimateGas.toString())
+        .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
+        .toFixed(0);
+    }
   }
 
   /**
@@ -122,22 +162,29 @@ export class RpcService implements IRpcService {
    * @param from
    * @param to
    * @param data
+   * @param value
+   * @param feePerGas
    * @param token
    */
-  public async transactionFee(from: string, to: string, data: string, token: string): Promise<string> {
+  public async transactionFee(from: string, to: string, data: string, value: string, feePerGas: string, token?: string): Promise<{ fee: string; currency: string }> {
     await this._initialization;
 
-    const [estimateGas, feePerGas]: [string, string] = await Promise.all([
-      this.estimateGas(from, to, data, token),
-      this._getFeePerGas(),
-    ]);
+    const [estimateGas, l1Fee] = await Promise.all([this.estimateGas(from, to, data, value, token), this._getL1GasCost(data)]);
 
-    const feeInEth = Big(estimateGas)
-      .times(feePerGas)
-      .times(Big(this._txRelayFeePercent).div(100).add(1))
-      .toFixed(0);
+    if (token && await this._hasSupportFeeInTokens(to, data, value)) {
+      const highFeePerGas = await this._getHighFeePerGas();
 
-    return await this._toTokens(feeInEth, token);
+      const feeInEth = Big(estimateGas)
+        .times(highFeePerGas)
+        .add(l1Fee)
+        .times(Big(this._txRelayFeePercent).div(100).add(1))
+        .toFixed(0);
+
+      const fee = await this._toTokens(feeInEth, token);
+      return { fee, currency: token };
+    } else {
+      return { fee: Big(estimateGas).times(feePerGas).add(l1Fee).toFixed(0), currency: 'NATIVE' };
+    }
   }
 
   /**
@@ -151,7 +198,7 @@ export class RpcService implements IRpcService {
 
     const [block, feePerGas]: [Block, string] = await Promise.all([
       this._provider.getBlock('latest'),
-      this._getFeePerGas(),
+      this._getHighFeePerGas(),
     ]);
 
     const gasOptions = block.baseFeePerGas ? {
@@ -209,46 +256,60 @@ export class RpcService implements IRpcService {
    * Get and calculate fee per gas
    * @private
    */
-  private async _getFeePerGas(): Promise<string> {
-    // Try to get gas price from external gas station.
-    if (CONFIG.EXTERNAL_GAS_STATION_URL) {
-      let data: any;
-
-      try {
-        const result = await axios.request({
-          url: CONFIG.EXTERNAL_GAS_STATION_URL,
-          method: CONFIG.EXTERNAL_GAS_STATION_METHOD,
-          headers: {
-            'content-type': 'application/json; charset=utf-8',
-          },
-        });
-        data = result.data;
-      } catch (e) {
-        logger.error(e);
-        throw new Error('Gas price fetch error');
-      }
-
-      try {
-        const rawValue = get(data, CONFIG.EXTERNAL_GAS_STATION_VALUE_PLACE);
-        const decValue = CONFIG.EXTERNAL_GAS_STATION_VALUE_BASE === 'HEX' ? parseInt(rawValue, 16) : parseFloat(rawValue);
-        return Big(decValue)
-          .times(Big(10).pow(Number(CONFIG.EXTERNAL_GAS_STATION_VALUE_DECIMALS)))
-          .times(CONFIG.FEE_PER_GAS_MULTIPLIER)
-          .toFixed(0);
-      } catch (e) {
-        logger.error(e);
-        throw new Error('Gas price parse error');
-      }
+  private async _getHighFeePerGas(): Promise<string> {
+    const gasSettings = await this._gasService.getGasSettings();
+    if (!gasSettings.high.maxFeePerGas && !gasSettings.high.gasPrice) {
+      throw new Error('Cannot get fee per gas');
     }
-    // Calculate gas price by blockchain
-    else {
-      const gasSettings = await getGasSettings(this._provider as any);
 
-      if ('maxFeePerGas' in gasSettings) {
-        return Big(gasSettings.maxFeePerGas.toString()).times(CONFIG.FEE_PER_GAS_MULTIPLIER).toString();
-      } else {
-        return Big(gasSettings.gasPrice.toString()).times(CONFIG.FEE_PER_GAS_MULTIPLIER).toString();
-      }
+    return Big(gasSettings.high.maxFeePerGas || gasSettings.high.gasPrice).times(CONFIG.FEE_PER_GAS_MULTIPLIER).toString()
+  }
+
+  /**
+   * Does the transaction support pay fee in tokens?
+   * @param data
+   * @param to
+   * @param value
+   */
+  private async _hasSupportFeeInTokens(to?: string, data?: string, value?: string): Promise<boolean> {
+    if (!to || !data || hexlify(data).startsWith(APPROVE_METHOD_HASH) || (value && BigNumber.from(value).gt(0))) {
+      return false;
     }
+    if (!this._gasStationContract) {
+      return false;
+    }
+    const contractAddress = isAddress(to);
+    if (!contractAddress) {
+      return false;
+    }
+
+    if (contractAddress in this._gasStationSupports) {
+      return this._gasStationSupports[contractAddress];
+    }
+
+    this._gasStationSupports[contractAddress] = this._provider.call({ to: contractAddress, data: RECIPIENT_INTERFACE.encodeFunctionData('isOwnGasStation', [this._gasStationContract.address]) })
+      .then(result => {
+        const [isOwnGasStation] = RECIPIENT_INTERFACE.decodeFunctionResult('isOwnGasStation', result);
+        return isOwnGasStation;
+      })
+      .catch(() => false);
+
+    return this._gasStationSupports[contractAddress];
+  }
+
+  /**
+   * Used in optimistic total fee calculation
+   * https://optimistic.etherscan.io/address/0x420000000000000000000000000000000000000f#readContract
+   * @param data
+   * @private
+   */
+  private async _getL1GasCost(data: string): Promise<string> {
+    const network = await this._provider.getNetwork();
+    if (![10, 69].includes(network.chainId)) {
+      return '0';
+    }
+
+    const l1Fee = await this._gasPriceOracleContract.getL1Fee(data);
+    return l1Fee.toString();
   }
 }

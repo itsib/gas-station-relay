@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { inject } from 'inversify';
 import { controller, httpPost, interfaces, next, request, response } from 'inversify-express-utils';
-import { POST_SEND_TRANSACTION_SCHEMA } from '../schemas/post-send-transaction';
+import { POST_SEND_TRANSACTION_SCHEMA } from '../schemas/post-send-transaction.schema';
 import { RpcService } from '../services';
 import { validatorMiddlewareFactory } from '../utils';
 
