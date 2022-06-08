@@ -45,9 +45,9 @@ async function startApp(): Promise<void> {
 
   server.setErrorConfig((app: Application) => {
     // Handle not found error
-    app.use('/*', () => {
-      throw new NotFound('Route not found');
-    });
+    // app.use('/*', () => {
+    //   throw new NotFound('Route not found');
+    // });
 
     // Catch and handle all errors
     app.use(errorMiddleware);
