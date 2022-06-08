@@ -1,7 +1,8 @@
 import './polyfills';
+import { NotFound } from '@tsed/exceptions';
 import compression from 'compression';
 import cors from 'cors';
-import express, { Application, Router } from 'express';
+import express, { Application } from 'express';
 import { resolve } from 'path';
 import { CONFIG } from './config';
 import { serverFactory } from './ioc/server';
@@ -34,11 +35,10 @@ async function startApp(): Promise<void> {
   server.setConfig((app: Application) => {
     app.use(function(req, res, next) {
       if (CONFIG.BASE_PATH !== '/' && req.url.startsWith(CONFIG.BASE_PATH)) {
-        req.url = req.url.replace(/\/$/, '').replace(CONFIG.BASE_PATH, '/');
+        req.url = req.url.replace(CONFIG.BASE_PATH, '');
       }
       next();
     });
-    app.set('base', CONFIG.BASE_PATH);
     app.use('/', express.static(resolve(`${__dirname}/public`), { redirect: true }));
     app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
     app.use(compression());
@@ -49,9 +49,9 @@ async function startApp(): Promise<void> {
 
   server.setErrorConfig((app: Application) => {
     // Handle not found error
-    // app.use('/*', () => {
-    //   throw new NotFound('Route not found');
-    // });
+    app.use('/*', () => {
+      throw new NotFound('Route not found');
+    });
 
     // Catch and handle all errors
     app.use(errorMiddleware);
