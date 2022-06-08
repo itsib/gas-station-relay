@@ -33,7 +33,7 @@ async function startApp(): Promise<void> {
   const server = serverFactory();
 
   server.setConfig((app: Application) => {
-    app.use('/', express.static(resolve(`${__dirname}/public`)));
+    app.use(express.static(resolve(`${__dirname}/public`)));
     app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
     app.use(compression());
     app.use(express.json());
