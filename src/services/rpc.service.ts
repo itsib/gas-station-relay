@@ -7,7 +7,7 @@ import { default as axios } from 'axios';
 import { Big } from 'big.js';
 import { BigNumber, Contract, getDefaultProvider, utils, Wallet } from 'ethers';
 import { formatEther } from 'ethers/lib/utils';
-import { injectable } from 'inversify';
+import { inject, injectable } from 'inversify';
 import get from 'lodash.get';
 import EXCHANGE_ABI from '../abi/exchange.json';
 import GAS_STATION_ABI from '../abi/gas-station.json';
@@ -27,8 +27,6 @@ export class RpcService implements IRpcService {
 
   private readonly _initialization: Promise<void>;
 
-  private readonly _provider: BaseProvider;
-
   private readonly _wallet: Wallet;
 
   private _gasStationContract: Contract;
@@ -37,44 +35,43 @@ export class RpcService implements IRpcService {
   // Commission for the execution of the transaction.
   private _txRelayFeePercent: string;
 
-  constructor() {
-    this._provider = getDefaultProvider(CONFIG.RPC_URL);
+  constructor(@inject('BaseProvider') private _provider: BaseProvider) {
     this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
 
     this._initialization = new Promise(async (resolve: () => void) => {
       logger.debug(`RPC Service initialization...`);
 
-      this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, GAS_STATION_ABI, this._wallet);
-
-      const [exchange, feePercent, balance]: [string, BigNumber, BigNumber] = await Promise.all([
-        this._gasStationContract.exchange(),
-        this._gasStationContract.txRelayFeePercent(),
-        this._wallet.getBalance('latest'),
-      ]);
-
-      this._txRelayFeePercent = feePercent.toString();
-      this._exchangeContract = new Contract(exchange, EXCHANGE_ABI, this._wallet);
-
-      logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
-      logger.debug(`Fee Payer Balance: ${formatEther(balance)} ETH`);
-      logger.debug(`Gas Station Contract: ${this._gasStationContract.address}`);
-      logger.debug(`Exchange Contract: ${this._exchangeContract.address}`);
-      logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent}%`);
-
-      // Subscribe to change contract state events
-      const address = this._gasStationContract.address;
-
-      this._provider.on({ address, topics: [utils.id('GasStationExchangeUpdated(address)')] }, (log: Log) => {
-        const { args: { newExchange } } = this._gasStationContract.interface.parseLog(log);
-        this._exchangeContract = new Contract(newExchange, new Interface(EXCHANGE_ABI), this._wallet);
-        logger.debug(`Exchange Contract was updated: ${newExchange}`);
-      });
-
-      this._provider.on({ address, topics: [utils.id('GasStationTxRelayFeePercentUpdated(uint256)')] }, (log: Log) => {
-        const { args: { newTxRelayFeePercent } } = this._gasStationContract.interface.parseLog(log);
-        this._txRelayFeePercent = newTxRelayFeePercent.toString();
-        logger.debug(`Tx Relay Fee Percent was updated: ${this._txRelayFeePercent}%`);
-      });
+      // this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, GAS_STATION_ABI, this._wallet);
+      //
+      // const [exchange, feePercent, balance]: [string, BigNumber, BigNumber] = await Promise.all([
+      //   this._gasStationContract.exchange(),
+      //   this._gasStationContract.txRelayFeePercent(),
+      //   this._wallet.getBalance('latest'),
+      // ]);
+      //
+      // this._txRelayFeePercent = feePercent.toString();
+      // this._exchangeContract = new Contract(exchange, EXCHANGE_ABI, this._wallet);
+      //
+      // logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
+      // logger.debug(`Fee Payer Balance: ${formatEther(balance)} ETH`);
+      // logger.debug(`Gas Station Contract: ${this._gasStationContract.address}`);
+      // logger.debug(`Exchange Contract: ${this._exchangeContract.address}`);
+      // logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent}%`);
+      //
+      // // Subscribe to change contract state events
+      // const address = this._gasStationContract.address;
+      //
+      // this._provider.on({ address, topics: [utils.id('GasStationExchangeUpdated(address)')] }, (log: Log) => {
+      //   const { args: { newExchange } } = this._gasStationContract.interface.parseLog(log);
+      //   this._exchangeContract = new Contract(newExchange, new Interface(EXCHANGE_ABI), this._wallet);
+      //   logger.debug(`Exchange Contract was updated: ${newExchange}`);
+      // });
+      //
+      // this._provider.on({ address, topics: [utils.id('GasStationTxRelayFeePercentUpdated(uint256)')] }, (log: Log) => {
+      //   const { args: { newTxRelayFeePercent } } = this._gasStationContract.interface.parseLog(log);
+      //   this._txRelayFeePercent = newTxRelayFeePercent.toString();
+      //   logger.debug(`Tx Relay Fee Percent was updated: ${this._txRelayFeePercent}%`);
+      // });
 
       resolve();
     });

@@ -1,10 +1,10 @@
 import { Router } from 'express';
-import 'reflect-metadata'; // <- Should be before the inversify-express-utils import
 import { InversifyExpressServer } from 'inversify-express-utils';
 import { container } from './container';
 
 // Controllers
 import '../controllers/info.controller';
+import '../controllers/gas.controller';
 import '../controllers/tx.controller';
 
 // Deprecated Controllers

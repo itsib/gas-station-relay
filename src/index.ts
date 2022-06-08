@@ -1,3 +1,4 @@
+import './polyfills';
 import { NotFound } from '@tsed/exceptions';
 import compression from 'compression';
 import cors from 'cors';

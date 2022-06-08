@@ -6,11 +6,11 @@ import { RpcService } from '../services';
 @controller('/info')
 export class InfoController implements interfaces.Controller {
 
-  constructor( @inject('RpcService') private rpcService: RpcService ) {}
+  constructor( @inject('RpcService') private _rpcService: RpcService ) {}
 
   @httpGet('/')
   async getInfo(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const relayInfo = await this.rpcService.relayInfo();
+    const relayInfo = await this._rpcService.relayInfo();
     return res.json(relayInfo);
   }
 }

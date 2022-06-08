@@ -9,7 +9,7 @@ import { validatorMiddlewareFactory } from '../utils';
 @controller('/tx')
 export class TxController implements interfaces.Controller {
 
-  constructor(@inject('RpcService') private rpcService: RpcService) {
+  constructor(@inject('RpcService') private _rpcService: RpcService) {
   }
 
   /**
@@ -20,7 +20,7 @@ export class TxController implements interfaces.Controller {
    */
   @httpPost('/fee', validatorMiddlewareFactory(POST_TX_FEE_SCHEMA))
   async postFee(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const fee = await this.rpcService.transactionFee(req.body.from, req.body.to, req.body.data, req.body.token);
+    const fee = await this._rpcService.transactionFee(req.body.from, req.body.to, req.body.data, req.body.token);
 
     return res.json({ fee });
   }
@@ -33,7 +33,7 @@ export class TxController implements interfaces.Controller {
    */
   @httpPost('/estimate-gas', validatorMiddlewareFactory(POST_TX_FEE_SCHEMA))
   async postEstimateGas(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const estimateGas = await this.rpcService.estimateGas(req.body.from, req.body.to, req.body.data, req.body.token);
+    const estimateGas = await this._rpcService.estimateGas(req.body.from, req.body.to, req.body.data, req.body.token);
 
     return res.json({ estimateGas });
   }
@@ -48,7 +48,7 @@ export class TxController implements interfaces.Controller {
   async postSend(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
     const { tx, fee, signature } = req.body;
 
-    const txHash = await this.rpcService.sendTransaction(tx, fee, signature);
+    const txHash = await this._rpcService.sendTransaction(tx, fee, signature);
     return res.json({ txHash });
   }
 }
