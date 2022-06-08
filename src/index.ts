@@ -33,12 +33,6 @@ async function startApp(): Promise<void> {
   const server = serverFactory();
 
   server.setConfig((app: Application) => {
-    // app.use(function(req, res, next) {
-    //   if (CONFIG.BASE_PATH !== '/' && req.url.startsWith(CONFIG.BASE_PATH)) {
-    //     req.url = req.url.replace(CONFIG.BASE_PATH, '');
-    //   }
-    //   next();
-    // });
     app.use('/', express.static(resolve(`${__dirname}/public`), { redirect: true }));
     app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
     app.use(compression());

@@ -17,7 +17,7 @@ const html = `<!DOCTYPE html>
   <meta charset="UTF-8">  
   <title>Plasma Gas Station API reference</title>
   
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 ${converter.makeHtml(text)}

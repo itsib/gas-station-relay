@@ -4,7 +4,7 @@
   <meta charset="UTF-8">  
   <title>Plasma Gas Station API reference</title>
   
-  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 <h1 id="plasmagasstationrelayserver">Plasma Gas Station Relay Server.</h1>
@@ -64,5 +64,17 @@
 <li><strong>avgBlockTime</strong> - (Required) Average block confirmation time.</li>
 </ul>
 <hr />
+<h3 id="posttxestimategas">POST <code>/tx/estimate-gas</code></h3>
+<p>Returns an estimate of the amount of gas that would be required to submit transaction to the network.
+An estimate may not be accurate since there could be another transaction on the network that was not accounted for, but after being mined affected relevant state.</p>
+<h5 id="request">Request:</h5>
+<pre><code>{
+    "data": "0xd16c7c7500000000000000000...00000000000000000000000000000000000",
+    "from": "0xF760BEBB3cD0B717E939fBf534D15Adef94adB98",
+    "to": "0x15f8f5df5AfC7b0Ebc25488f845c7C3776a1cD28",
+    "value": "0x0",
+    "token": ""
+}
+</code></pre>
 </body>
 </html>
