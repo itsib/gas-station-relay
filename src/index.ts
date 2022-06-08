@@ -30,10 +30,12 @@ startApp().catch(e => {
 });
 
 async function startApp(): Promise<void> {
-  const server = serverFactory();
+  const rootRouter = Router({ strict: true });
+  rootRouter.use('/', express.static(resolve(`${__dirname}/public`)));
+
+  const server = serverFactory(rootRouter);
 
   server.setConfig((app: Application) => {
-    app.use(express.static(resolve(`${__dirname}/public`)));
     app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
     app.use(compression());
     app.use(express.json());
