@@ -14,5 +14,5 @@ import '../controllers/tx-fee.controller';
 import '../controllers/send-tx.controller';
 
 export function serverFactory(router?: Router): InversifyExpressServer {
-  return new InversifyExpressServer(container, router, { rootPath: CONFIG.ROOT_PATH });
+  return new InversifyExpressServer(container, router);
 }
