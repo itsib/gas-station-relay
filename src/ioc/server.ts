@@ -1,6 +1,5 @@
 import { Router } from 'express';
 import { InversifyExpressServer } from 'inversify-express-utils';
-import { CONFIG } from '../config';
 import { container } from './container';
 
 // Controllers
