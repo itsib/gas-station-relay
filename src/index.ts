@@ -33,7 +33,7 @@ async function startApp(): Promise<void> {
   const server = serverFactory();
 
   server.setConfig((app: Application) => {
-    app.use('/', express.static(resolve(`${__dirname}/public`), { redirect: true }));
+    app.use('/', express.static(resolve(`${__dirname}/../public`), { redirect: true }));
     app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
     app.use(compression());
     app.use(express.json());
@@ -44,7 +44,7 @@ async function startApp(): Promise<void> {
   server.setErrorConfig((app: Application) => {
     // Handle not found error
     app.use('/*', () => {
-      throw new NotFound('Route not found');
+      throw new NotFound('Route is not found');
     });
 
     // Catch and handle all errors

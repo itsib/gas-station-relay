@@ -1,17 +1,14 @@
 import { Router } from 'express';
+import { sync } from 'glob';
 import { InversifyExpressServer } from 'inversify-express-utils';
+import { join } from 'path';
 import { container } from './container';
 
-// Controllers
-import '../controllers/info.controller';
-import '../controllers/gas.controller';
-import '../controllers/tx.controller';
-
-// Deprecated Controllers
-import '../controllers/estimate-gas.controller';
-import '../controllers/tx-fee.controller';
-import '../controllers/send-tx.controller';
-
 export function serverFactory(router?: Router): InversifyExpressServer {
+  const [, ext] = __filename.match(/\.(\w+)$/);
+
+  // Dynamic import all controllers
+  sync(join(__dirname,'../controllers' ,'**', `*.controller.${ext}`)).forEach((filename: string): void => require(filename));
+
   return new InversifyExpressServer(container, router);
 }
