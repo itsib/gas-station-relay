@@ -1,13 +1,9 @@
-import * as express from 'express';
 import { inject } from 'inversify';
-import { BaseHttpController, controller, httpGet, response } from 'inversify-express-utils';
-import { Route, Get, Response, Example, Tags } from 'tsoa';
+import { BaseHttpController, controller, httpGet } from 'inversify-express-utils';
+import { Example, Get, Route, Tags } from 'tsoa';
 import { RpcService } from '../services';
 import { RelayInfo } from '../types';
 
-/**
- * Relay info
- */
 @Route('/info')
 @controller('/info')
 export class InfoController extends BaseHttpController {

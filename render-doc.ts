@@ -6,7 +6,6 @@ import * as packageJson from './package.json';
     name: 'Plasma Gas Station Relay Server.',
     description: 'The relay server pays for gas for the user\'s transaction, takes ERC 20 tokens.',
     version: packageJson.version,
-    basePath: '/',
     specFileBaseName: 'plasma-gas-station-api-doc',
     entryFile: 'src/index.ts',
     specVersion: 3,
@@ -17,9 +16,8 @@ import * as packageJson from './package.json';
     noImplicitAdditionalProperties: 'throw-on-extras',
     spec: {
       tags: [
-        {
-          name: "Info",
-        }
+        { name: "Info" },
+        { name: "Gas" },
       ],
     }
   };

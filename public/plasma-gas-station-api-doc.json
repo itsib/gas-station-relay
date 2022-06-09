@@ -6,6 +6,48 @@
 		"requestBodies": {},
 		"responses": {},
 		"schemas": {
+			"GasSettingsBySpeed": {
+				"properties": {
+					"gasPrice": {
+						"type": "string"
+					},
+					"maxFeePerGas": {
+						"type": "string"
+					},
+					"maxPriorityFeePerGas": {
+						"type": "string"
+					},
+					"confirmationTime": {
+						"type": "string"
+					}
+				},
+				"type": "object",
+				"additionalProperties": false
+			},
+			"GasSettings": {
+				"properties": {
+					"high": {
+						"$ref": "#/components/schemas/GasSettingsBySpeed"
+					},
+					"middle": {
+						"$ref": "#/components/schemas/GasSettingsBySpeed"
+					},
+					"low": {
+						"$ref": "#/components/schemas/GasSettingsBySpeed"
+					},
+					"avgBlockTime": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"high",
+					"middle",
+					"low",
+					"avgBlockTime"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
 			"RelayInfo": {
 				"properties": {
 					"chainId": {
@@ -39,11 +81,60 @@
 	},
 	"info": {
 		"title": "Plasma Gas Station Relay Server.",
-		"version": "1.1.0",
+		"version": "1.2.2",
 		"description": "The relay server pays for gas for the user's transaction, takes ERC 20 tokens."
 	},
 	"openapi": "3.0.0",
 	"paths": {
+		"/gas": {
+			"get": {
+				"operationId": "GeGasPrice",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/GasSettings"
+								},
+								"examples": {
+									"Example 1": {
+										"value": {
+											"high": {
+												"maxFeePerGas": "3904221514",
+												"maxPriorityFeePerGas": "3904221504",
+												"gasPrice": "3904221504",
+												"confirmationTime": "363.06"
+											},
+											"middle": {
+												"maxFeePerGas": "3904221514",
+												"maxPriorityFeePerGas": "3904221504",
+												"gasPrice": "3904221504",
+												"confirmationTime": "363.06"
+											},
+											"low": {
+												"maxFeePerGas": "3904221514",
+												"maxPriorityFeePerGas": "3904221504",
+												"gasPrice": "3904221504",
+												"confirmationTime": "363.06"
+											},
+											"avgBlockTime": "12.102"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns recommended priority fee or gas price in wei. And also estimated  transaction execution time.",
+				"summary": "Gas price",
+				"tags": [
+					"Gas"
+				],
+				"security": [],
+				"parameters": []
+			}
+		},
 		"/info": {
 			"get": {
 				"operationId": "GetInfo",
@@ -84,12 +175,15 @@
 	},
 	"servers": [
 		{
-			"url": "/"
+			"url": "/undefined"
 		}
 	],
 	"tags": [
 		{
 			"name": "Info"
+		},
+		{
+			"name": "Gas"
 		}
 	]
 }
