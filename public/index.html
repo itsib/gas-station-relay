@@ -1,7 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8"/>
+  <script type="text/javascript">
+        if (!document.baseURI.endsWith('/')) {
+          location.href = `${document.baseURI}/`;
+        }
+  </script>
+
+  <link rel="shortcut icon" type="image/png" href="favicon.ico"/>
   <title>Plasma Gas Station API reference</title>
 
   <link rel="stylesheet" href="styles.css">
@@ -25,14 +32,14 @@
 }
 </code></pre>
 <ul>
-<li><strong>chainId</strong> - ID of the blockchain used by the relayer.</li>
-<li><strong>gasStation</strong> - Gas Station Contract address.</li>
-<li><strong>feeTokens</strong> - Addresses of tokens that can be used to pay fee.</li>
-<li><strong>balance</strong> - The balance of the relay account. In ETH (Raw amount).</li>
+  <li><strong>chainId</strong> - ID of the blockchain used by the relayer.</li>
+  <li><strong>gasStation</strong> - Gas Station Contract address.</li>
+  <li><strong>feeTokens</strong> - Addresses of tokens that can be used to pay fee.</li>
+  <li><strong>balance</strong> - The balance of the relay account. In ETH (Raw amount).</li>
 </ul>
-<hr />
+<hr/>
 <h3 id="getgas">GET <code>/gas</code></h3>
-<p>Returns recommended priority fee or gas price in wei. And also estimated  transaction execution time.</p>
+<p>Returns recommended priority fee or gas price in wei. And also estimated transaction execution time.</p>
 <h5 id="response-1">Response:</h5>
 <pre><code>{
     "high": {
@@ -57,16 +64,23 @@
 }
 </code></pre>
 <ul>
-<li><strong>maxFeePerGas</strong> - (Optional) The maxFeePerGas to use for a transaction. This is based on the most recent block's baseFee.</li>
-<li><strong>maxPriorityFeePerGas</strong> - (Optional) The maxPriorityFeePerGas to use for a transaction. This accounts for the uncle risk and for the majority of current MEV risk.</li>
-<li><strong>gasPrice</strong> - (Optional) The gasPrice to use for legacy transactions or networks which do not support EIP-1559.</li>
-<li><strong>confirmationTime</strong> - (Optional) Estimated time of transaction confirmation.</li>
-<li><strong>avgBlockTime</strong> - (Required) Average block confirmation time.</li>
+  <li><strong>maxFeePerGas</strong> - (Optional) The maxFeePerGas to use for a transaction. This is based on the most
+    recent block's baseFee.
+  </li>
+  <li><strong>maxPriorityFeePerGas</strong> - (Optional) The maxPriorityFeePerGas to use for a transaction. This
+    accounts for the uncle risk and for the majority of current MEV risk.
+  </li>
+  <li><strong>gasPrice</strong> - (Optional) The gasPrice to use for legacy transactions or networks which do not
+    support EIP-1559.
+  </li>
+  <li><strong>confirmationTime</strong> - (Optional) Estimated time of transaction confirmation.</li>
+  <li><strong>avgBlockTime</strong> - (Required) Average block confirmation time.</li>
 </ul>
-<hr />
+<hr/>
 <h3 id="posttxestimategas">POST <code>/tx/estimate-gas</code></h3>
 <p>Returns an estimate of the amount of gas that would be required to submit transaction to the network.
-An estimate may not be accurate since there could be another transaction on the network that was not accounted for, but after being mined affected relevant state.</p>
+  An estimate may not be accurate since there could be another transaction on the network that was not accounted for,
+  but after being mined affected relevant state.</p>
 <h5 id="request">Request:</h5>
 <pre><code>{
     "data": "0xd16c7c7500000000000000000...00000000000000000000000000000000000",
