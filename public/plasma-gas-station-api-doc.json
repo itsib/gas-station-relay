@@ -81,7 +81,7 @@
 	},
 	"info": {
 		"title": "Plasma Gas Station Relay Server.",
-		"version": "1.2.2",
+		"version": "1.2.3",
 		"description": "The relay server pays for gas for the user's transaction, takes ERC 20 tokens."
 	},
 	"openapi": "3.0.0",
@@ -175,7 +175,7 @@
 	},
 	"servers": [
 		{
-			"url": "/undefined"
+			"url": "/."
 		}
 	],
 	"tags": [
