@@ -22,6 +22,10 @@
     window.ui = SwaggerUIBundle({
       url: 'plasma-gas-station-api-doc.json',
       dom_id: '#swagger-ui',
+      requestInterceptor: (a) => {
+        debugger;
+        return a;
+      }
     });
   };
 </script>
