@@ -12,7 +12,7 @@
   "scripts": {
     "build": "npm run clean && tsc",
     "build:docker": "npm run build && ./build.sh",
-    "start": "node ./index.js",
+    "start": "node ./build/index.js",
     "dev": "ts-node ./src/index.ts",
     "dev:watch": "nodemon",
     "bump": "./node_modules/.bin/bump --tag --push --all",
