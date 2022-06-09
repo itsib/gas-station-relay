@@ -1,0 +1,95 @@
+{
+	"components": {
+		"examples": {},
+		"headers": {},
+		"parameters": {},
+		"requestBodies": {},
+		"responses": {},
+		"schemas": {
+			"RelayInfo": {
+				"properties": {
+					"chainId": {
+						"type": "number",
+						"format": "double"
+					},
+					"gasStation": {
+						"type": "string"
+					},
+					"feeTokens": {
+						"items": {
+							"type": "string"
+						},
+						"type": "array"
+					},
+					"balance": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"chainId",
+					"gasStation",
+					"feeTokens",
+					"balance"
+				],
+				"type": "object",
+				"additionalProperties": false
+			}
+		},
+		"securitySchemes": {}
+	},
+	"info": {
+		"title": "Plasma Gas Station Relay Server.",
+		"version": "1.1.0",
+		"description": "The relay server pays for gas for the user's transaction, takes ERC 20 tokens."
+	},
+	"openapi": "3.0.0",
+	"paths": {
+		"/info": {
+			"get": {
+				"operationId": "GetInfo",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/RelayInfo"
+								},
+								"examples": {
+									"Example 1": {
+										"value": {
+											"chainId": 1,
+											"gasStation": "0x280c78D5829Ad6E2403d6ae49BCf85f1D2119E0d",
+											"feeTokens": [
+												"0xdAC17F958D2ee523a2206206994597C13D831ec7",
+												"0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48"
+											],
+											"balance": "242392145778186007"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"description": "The Gas Station relay server configuration info.",
+				"summary": "Relay server info.",
+				"tags": [
+					"Info"
+				],
+				"security": [],
+				"parameters": []
+			}
+		}
+	},
+	"servers": [
+		{
+			"url": "/"
+		}
+	],
+	"tags": [
+		{
+			"name": "Info"
+		}
+	]
+}

@@ -13,13 +13,13 @@ body {
 h1 {
     padding-bottom: 0.3em;
     font-size: 2em;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid #4c5563;
 }
 
 h2 {
     padding-bottom: 0.3em;
     font-size: 1.5em;
-    border-bottom: 1px solid #21262d;
+    border-bottom: 1px solid #4c5563;
 }
 
 h3 {
@@ -85,5 +85,122 @@ pre code {
 }
 
 hr {
-    border-color: #21262d;
+    border-color: #4c5563;
+}
+
+* {
+    color: #c9d1d9 !important;
+}
+
+.swagger-ui svg:not(:root) {
+    overflow: hidden;
+    fill: #c9d1d9;
+}
+
+.swagger-ui select {
+    border: 1px solid gray;
+    font-weight: 500;
+    background: transparent;
+}
+.swagger-ui select:focus-visible {
+    outline: 1px solid rgba(211, 206, 206, 0.48);
+}
+
+.swagger-ui .btn {
+    border: 1px solid gray;
+}
+
+.swagger-ui .opblock-body pre.microlight {
+    padding: 16px 18px !important;
+    font-weight: 400;
+    color: #c9d1d9 !important;
+    background: #161b22 !important;
+    border-radius: 6px !important;
+}
+
+.swagger-ui .response-control-media-type__accept-message,
+.swagger-ui .response-control-media-type__accept-message * {
+    color: green !important;
+}
+
+.swagger-ui table thead tr td,
+.swagger-ui table thead tr th {
+    border-bottom: 1px solid #4c5563;
+}
+
+.swagger-ui .download-contents {
+    padding: 5px 10px;
+    background: #2c3142;
+    font-weight: 500;
+}
+
+.swagger-ui .copy-to-clipboard {
+    width: 30px !important;
+    height: 30px !important;
+    background: #2c3142;
+    color: #c9d1d9 !important;
+}
+
+.swagger-ui .info .title {
+    margin-bottom: 10px;
+    color: inherit;
+}
+.swagger-ui .info .title small {
+    background: transparent;
+    border: 1px solid #7d8492;
+}
+.swagger-ui .info .title small.version-stamp {
+    background: transparent;
+    border: 1px solid #89bf04;
+}
+.swagger-ui .info .link {
+    color: #58abff;
+}
+.swagger-ui .info .link:hover {
+    color: #58abff;
+    text-decoration: underline;
+}
+
+.swagger-ui .scheme-container {
+    display: none;
+}
+
+.swagger-ui .opblock-tag {
+    border-bottom: 1px solid #4c5563;
+}
+.swagger-ui .opblock-tag:hover {
+    background: #252d3a;
+}
+
+.swagger-ui .opblock {
+    box-shadow: 0 0 8px rgb(170 148 148 / 29%);
+}
+.swagger-ui .opblock .opblock-section-header {
+    background: #ffffff1c;
+}
+
+.swagger-ui .opblock-summary-control .arrow {
+    margin-right: 20px;
+}
+.swagger-ui .model-box-control:focus,
+.swagger-ui .models-control:focus,
+.swagger-ui .opblock-summary-control:focus {
+    outline: 1px solid rgba(211, 206, 206, 0.48);
+    border-radius: 4px;
+}
+
+.swagger-ui section.models {
+    border: 1px solid #4c5563;
+}
+.swagger-ui section.models h4 {
+    padding: 5px;
+}
+.swagger-ui section.models h4 .models-control {
+    padding: 6px 0 6px 10px;
+}
+.swagger-ui section.models.is-open h4 {
+    border-bottom: 1px solid #4c5563;
+}
+.swagger-ui section.models h4 svg {
+    margin-right: 20px;
 }

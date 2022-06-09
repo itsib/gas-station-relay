@@ -3,9 +3,10 @@ import { NotFound } from '@tsed/exceptions';
 import compression from 'compression';
 import cors from 'cors';
 import express, { Application } from 'express';
+import { InversifyExpressServer } from 'inversify-express-utils';
 import { resolve } from 'path';
 import { CONFIG } from './config';
-import { serverFactory } from './ioc/server';
+import { container } from './ioc/container';
 import { errorMiddleware, httpLogMiddleware } from './middlewares';
 import { logger } from './utils';
 
@@ -30,10 +31,11 @@ startApp().catch(e => {
 });
 
 async function startApp(): Promise<void> {
-  const server = serverFactory();
+  const server = new InversifyExpressServer(container);
 
   server.setConfig((app: Application) => {
     app.use('/', express.static(resolve(`${__dirname}/../public`), { redirect: true }));
+    // app.use('/', express.static(swaggerUI.absolutePath()));
     app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
     app.use(compression());
     app.use(express.json());
