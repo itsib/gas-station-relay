@@ -175,7 +175,7 @@
 	},
 	"servers": [
 		{
-			"url": "/undefined"
+			"url": "/"
 		}
 	],
 	"tags": [
