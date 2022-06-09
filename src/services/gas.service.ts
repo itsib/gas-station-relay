@@ -54,7 +54,13 @@ export class GasService implements IGasService {
       throw new Error('It is impossible to obtain gas price');
     }
 
-    const sortedKeys = Object.keys(confirmationTimeByPriorityFee).sort((k0, k1) => Big(k0).minus(k1).toNumber());
+    const sortedKeys = Object.keys(confirmationTimeByPriorityFee).sort((k0, k1) => {
+      const diff = Big(k0).minus(k1);
+      if (diff.eq(0)) {
+        return 0;
+      }
+      return diff.gt(0) ? 1 : -1;
+    });
     const baseFeePerGas = Big(baseFeeSuggestion).times(1.2).round(0);
     const urgentConfirmTimeInBlocks = sortedKeys.find(key => Big(maxPriorityFeeSuggestions.urgent).gte(confirmationTimeByPriorityFee[key]));
     const fastConfirmTimeInBlocks = sortedKeys.find(key => Big(maxPriorityFeeSuggestions.fast).gte(confirmationTimeByPriorityFee[key]));
