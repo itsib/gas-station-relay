@@ -35,7 +35,6 @@ async function startApp(): Promise<void> {
 
   server.setConfig((app: Application) => {
     app.use('/', express.static(resolve(`${__dirname}/../public`), { redirect: true }));
-    // app.use('/', express.static(swaggerUI.absolutePath()));
     app.use(cors({ origin: CONFIG.CORS_ORIGIN, credentials: CONFIG.CORS_CREDENTIALS }));
     app.use(compression());
     app.use(express.json());
