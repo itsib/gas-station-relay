@@ -24,16 +24,11 @@
       dom_id: '#swagger-ui',
       requestInterceptor: request => {
         if (!request.loadSpec && !request.url.startsWith(document.baseURI)) {
-          debugger;
+          const newOrigin = document.baseURI.replace(/\/$/, '');
+          const oldOrigin = new URL(request.url).origin;
+          request.url = request.url.replace(oldOrigin, newOrigin);
         }
         return request;
-
-        //credentials: "same-origin"
-        // headers: {accept: 'application/json'}
-        // method: "GET"
-        // requestInterceptor: ƒ (e)
-        // responseInterceptor: ƒ (e)
-        // url: "https://gsn.plasma-bank.com/info"
       }
     });
   };
