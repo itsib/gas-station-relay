@@ -22,9 +22,18 @@
     window.ui = SwaggerUIBundle({
       url: 'plasma-gas-station-api-doc.json',
       dom_id: '#swagger-ui',
-      requestInterceptor: (a) => {
-        debugger;
-        return a;
+      requestInterceptor: request => {
+        if (!request.loadSpec && !request.url.startsWith(document.baseURI)) {
+          debugger;
+        }
+        return request;
+
+        //credentials: "same-origin"
+        // headers: {accept: 'application/json'}
+        // method: "GET"
+        // requestInterceptor: ƒ (e)
+        // responseInterceptor: ƒ (e)
+        // url: "https://gsn.plasma-bank.com/info"
       }
     });
   };
