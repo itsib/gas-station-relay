@@ -12,7 +12,7 @@ import GAS_PRICE_ORACLE_ABI from '../abi/gas-price-oracle.json';
 import GAS_STATION_ABI from '../abi/gas-station.json';
 import RECIPIENT_ABI from '../abi/recipient.json';
 import { CONFIG } from '../config';
-import { FeeInfo, RelayInfo, TxInfo } from '../types';
+import { RelayInfo, TxFeeResult, TxSendQueryFee, TxSendQueryInfo } from '../types';
 import { isAddress, logger, parseRpcCallError } from '../utils';
 import { GasService } from './gas.service';
 
@@ -21,9 +21,9 @@ const RECIPIENT_INTERFACE = new Interface(RECIPIENT_ABI as any);
 
 export interface IRpcService {
   relayInfo: () => Promise<RelayInfo>;
-  estimateGas: (from: string, to: string, data: string, token: string) => Promise<string>;
+  estimateGas: (from: string, to: string, data: string, token: string) => Promise<{ estimateGas: string }>;
   transactionFee: (from: string, to: string, data: string, value: string, feePerGas: string, token?: string) => Promise<{ fee: string; currency: string }>;
-  sendTransaction: (tx: TxInfo, fee: FeeInfo, signature: string) => Promise<string>;
+  sendTransaction: (tx: TxSendQueryInfo, fee: TxSendQueryFee, signature: string) => Promise<{ txHash: string }>;
 }
 
 @injectable()
@@ -133,7 +133,7 @@ export class RpcService implements IRpcService {
    * @param value
    * @param token
    */
-  public async estimateGas(from: string, to: string, data: string, value: string, token?: string): Promise<string> {
+  public async estimateGas(from: string, to: string, data: string, value: string, token?: string): Promise<{ estimateGas: string }> {
     await this._initialization;
 
     // Estimate gas with gas station
@@ -143,17 +143,21 @@ export class RpcService implements IRpcService {
         this._gasStationContract.estimateGas.execute(from, to, data),
       ]);
 
-      return Big(relayEstimateGas.add(txEstimateGas).toString())
-        .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
-        .toFixed(0);
+      return {
+        estimateGas: Big(relayEstimateGas.add(txEstimateGas).toString())
+          .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
+          .toFixed(0),
+      };
     }
     // Common estimate gas
     else {
       const estimateGas = await this._provider.estimateGas({ from, to, data, value });
 
-      return Big(estimateGas.toString())
-        .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
-        .toFixed(0);
+      return {
+        estimateGas: Big(estimateGas.toString())
+          .times(CONFIG.ESTIMATE_GAS_MULTIPLIER)
+          .toFixed(0),
+      };
     }
   }
 
@@ -166,10 +170,10 @@ export class RpcService implements IRpcService {
    * @param feePerGas
    * @param token
    */
-  public async transactionFee(from: string, to: string, data: string, value: string, feePerGas: string, token?: string): Promise<{ fee: string; currency: string }> {
+  public async transactionFee(from: string, to: string, data: string, value: string, feePerGas: string, token?: string): Promise<TxFeeResult> {
     await this._initialization;
 
-    const [estimateGas, l1Fee] = await Promise.all([this.estimateGas(from, to, data, value, token), this._getL1GasCost(data)]);
+    const [{ estimateGas }, l1Fee] = await Promise.all([this.estimateGas(from, to, data, value, token), this._getL1GasCost(data)]);
 
     if (token && await this._hasSupportFeeInTokens(to, data, value)) {
       const highFeePerGas = await this._getHighFeePerGas();
@@ -193,7 +197,7 @@ export class RpcService implements IRpcService {
    * @param fee
    * @param signature
    */
-  public async sendTransaction(tx: TxInfo, fee: FeeInfo, signature: string): Promise<string> {
+  public async sendTransaction(tx: TxSendQueryInfo, fee: TxSendQueryFee, signature: string): Promise<{ txHash: string }> {
     await this._initialization;
 
     const [block, feePerGas]: [Block, string] = await Promise.all([
@@ -227,9 +231,12 @@ export class RpcService implements IRpcService {
     // Send client's transaction
     try {
       logger.debug(`Transaction sending`);
-      const transaction = await this._gasStationContract.sendTransaction(tx, { ...fee, feePerGas }, signature, txOptions);
+      const transaction = await this._gasStationContract.sendTransaction(tx, {
+        ...fee,
+        feePerGas,
+      }, signature, txOptions);
       logger.debug(`Transaction sent ${transaction.hash}`);
-      return transaction.hash;
+      return { txHash: transaction.hash };
     } catch (e) {
       throw new InternalServerError(e.message, e);
     }
@@ -287,7 +294,10 @@ export class RpcService implements IRpcService {
       return this._gasStationSupports[contractAddress];
     }
 
-    this._gasStationSupports[contractAddress] = this._provider.call({ to: contractAddress, data: RECIPIENT_INTERFACE.encodeFunctionData('isOwnGasStation', [this._gasStationContract.address]) })
+    this._gasStationSupports[contractAddress] = this._provider.call({
+      to: contractAddress,
+      data: RECIPIENT_INTERFACE.encodeFunctionData('isOwnGasStation', [this._gasStationContract.address]),
+    })
       .then(result => {
         const [isOwnGasStation] = RECIPIENT_INTERFACE.decodeFunctionResult('isOwnGasStation', result);
         return isOwnGasStation;

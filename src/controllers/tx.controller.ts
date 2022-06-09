@@ -1,54 +1,56 @@
-import { NextFunction, Request, Response } from 'express';
 import { inject } from 'inversify';
-import { controller, httpPost, interfaces, next, request, response } from 'inversify-express-utils';
+import { BaseHttpController, controller, httpPost, requestBody } from 'inversify-express-utils';
+import { Body, Example, Post, Route, Tags } from 'tsoa';
 import { POST_ESTIMATE_GAS_SCHEMA } from '../schemas/post-estimate-gas.schema';
 import { POST_SEND_TRANSACTION_SCHEMA } from '../schemas/post-send-transaction.schema';
 import { POST_TX_FEE_SCHEMA } from '../schemas/post-tx-fee.schema';
 import { RpcService } from '../services';
+import { TxEstimateGasQuery, TxFeeQuery, TxFeeResult, TxSendQuery } from '../types';
 import { validatorMiddlewareFactory } from '../utils';
 
+@Route('/tx')
 @controller('/tx')
-export class TxController implements interfaces.Controller {
+export class TxController extends BaseHttpController {
 
   constructor(@inject('RpcService') private _rpcService: RpcService) {
+    super();
   }
 
   /**
-   * Returns total transaction fee in received tokens (raw tokens amount)
-   * @param req
-   * @param res
-   * @param nextFn
+   * Returns total transaction fee in received tokens.
+   * If the received token address is not defined or is not supported, then fee will be in ETH
    */
+  @Post('/fee')
+  @Example<TxFeeResult>({
+    currency: 'NATIVE',
+    fee: '89934100000000',
+  })
+  @Tags('Transaction')
   @httpPost('/fee', validatorMiddlewareFactory(POST_TX_FEE_SCHEMA))
-  async postFee(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const txFee = await this._rpcService.transactionFee(req.body.from, req.body.to, req.body.data, req.body.value, req.body.feePerGas, req.body.token);
-    return res.json(txFee);
+  async postFee(@requestBody() @Body() body: TxFeeQuery): Promise<TxFeeResult> {
+    return await this._rpcService.transactionFee(body.from, body.to, body.data, body.value, body.feePerGas, body.token);
   }
 
   /**
-   * Returns the estimated number of gas units to execute the transaction.
-   * @param req
-   * @param res
-   * @param nextFn
+   * Returns an estimate of the amount of gas that would be required to submit transaction to the network.
+   * An estimate may not be accurate since there could be another transaction on the network that was not accounted for, but after being mined affected relevant state.
    */
+  @Post('/estimate-gas')
+  @Example<{ estimateGas: string }>({ estimateGas: '8993410'})
+  @Tags('Transaction')
   @httpPost('/estimate-gas', validatorMiddlewareFactory(POST_ESTIMATE_GAS_SCHEMA))
-  async postEstimateGas(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const estimateGas = await this._rpcService.estimateGas(req.body.from, req.body.to, req.body.data, req.body.value, req.body.token);
-
-    return res.json({ estimateGas });
+  async postEstimateGas(@requestBody() @Body() body: TxEstimateGasQuery): Promise<{ estimateGas: string }> {
+    return await this._rpcService.estimateGas(body.from, body.to, body.data, body.value, body.token);
   }
 
   /**
    * Sends a transaction to the Gas Station contract.
-   * @param req
-   * @param res
-   * @param nextFn
    */
+  @Post('/send')
+  @Tags('Transaction')
   @httpPost('/send', validatorMiddlewareFactory(POST_SEND_TRANSACTION_SCHEMA))
-  async postSend(@request() req: Request, @response() res: Response, @next() nextFn: NextFunction): Promise<Response> {
-    const { tx, fee, signature } = req.body;
-
-    const txHash = await this._rpcService.sendTransaction(tx, fee, signature);
-    return res.json({ txHash });
+  async postSend(@requestBody() @Body() body: TxSendQuery): Promise<{txHash: string}> {
+    const { tx, fee, signature } = body;
+    return await this._rpcService.sendTransaction(tx, fee, signature);
   }
 }

@@ -4,7 +4,7 @@ import { Example, Get, Route, Tags } from 'tsoa';
 import { RpcService } from '../services';
 import { RelayInfo } from '../types';
 
-@Route('/info')
+@Route('info')
 @controller('/info')
 export class InfoController extends BaseHttpController {
 

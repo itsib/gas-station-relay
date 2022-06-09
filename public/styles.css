@@ -114,6 +114,15 @@ hr {
     outline: 1px solid rgba(211, 206, 206, 0.48);
 }
 
+.swagger-ui textarea {
+    background: #161b22;
+    font-weight: 400;
+}
+.swagger-ui textarea:focus {
+    border: none;
+    outline: 1px solid #61affe;
+}
+
 .swagger-ui .btn {
     border: 1px solid gray;
 }

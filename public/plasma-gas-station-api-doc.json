@@ -75,13 +75,168 @@
 				],
 				"type": "object",
 				"additionalProperties": false
+			},
+			"TxFeeResult": {
+				"properties": {
+					"fee": {
+						"type": "string",
+						"description": "Fee amount. int256 string."
+					},
+					"currency": {
+						"type": "string",
+						"description": "Token address for pay fee, or 'NATIVE' if fee cannot be paid with tokens."
+					}
+				},
+				"required": [
+					"fee",
+					"currency"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TxFeeQuery": {
+				"properties": {
+					"from": {
+						"type": "string",
+						"description": "The address from which the transaction is sent"
+					},
+					"to": {
+						"type": "string",
+						"description": "The address of the contract or user where the transaction will be sent"
+					},
+					"data": {
+						"type": "string",
+						"description": "Transaction raw data"
+					},
+					"value": {
+						"type": "string",
+						"description": "ETH to send"
+					},
+					"feePerGas": {
+						"type": "string",
+						"description": "The cost of a unit of gas in wei"
+					},
+					"token": {
+						"type": "string",
+						"description": "The token that is required to pay fee"
+					}
+				},
+				"required": [
+					"from",
+					"to",
+					"data",
+					"value",
+					"feePerGas"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TxEstimateGasQuery": {
+				"properties": {
+					"from": {
+						"type": "string",
+						"description": "The address from which the transaction is sent"
+					},
+					"to": {
+						"type": "string",
+						"description": "The address of the contract or user where the transaction will be sent"
+					},
+					"data": {
+						"type": "string",
+						"description": "Transaction raw data"
+					},
+					"value": {
+						"type": "string",
+						"description": "ETH to send"
+					},
+					"token": {
+						"type": "string",
+						"description": "The token that is required to pay fee"
+					}
+				},
+				"required": [
+					"from",
+					"to",
+					"data",
+					"value"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TxSendQueryInfo": {
+				"properties": {
+					"from": {
+						"type": "string"
+					},
+					"to": {
+						"type": "string"
+					},
+					"gas": {
+						"type": "string"
+					},
+					"nonce": {
+						"type": "string"
+					},
+					"deadline": {
+						"type": "string"
+					},
+					"data": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"from",
+					"to",
+					"gas",
+					"nonce",
+					"deadline",
+					"data"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TxSendQueryFee": {
+				"properties": {
+					"token": {
+						"type": "string"
+					},
+					"approvalData": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"token",
+					"approvalData"
+				],
+				"type": "object",
+				"additionalProperties": false
+			},
+			"TxSendQuery": {
+				"properties": {
+					"tx": {
+						"$ref": "#/components/schemas/TxSendQueryInfo"
+					},
+					"fee": {
+						"$ref": "#/components/schemas/TxSendQueryFee"
+					},
+					"signature": {
+						"type": "string"
+					}
+				},
+				"required": [
+					"tx",
+					"fee",
+					"signature"
+				],
+				"type": "object",
+				"additionalProperties": false
 			}
 		},
 		"securitySchemes": {}
 	},
 	"info": {
 		"title": "Plasma Gas Station Relay Server.",
-		"version": "1.2.3",
+		"version": "1.2.4",
 		"description": "The relay server pays for gas for the user's transaction, takes ERC 20 tokens."
 	},
 	"openapi": "3.0.0",
@@ -171,6 +326,136 @@
 				"security": [],
 				"parameters": []
 			}
+		},
+		"/tx/fee": {
+			"post": {
+				"operationId": "PostFee",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"$ref": "#/components/schemas/TxFeeResult"
+								},
+								"examples": {
+									"Example 1": {
+										"value": {
+											"currency": "NATIVE",
+											"fee": "89934100000000"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns total transaction fee in received tokens.\nIf the received token address is not defined or is not supported, then fee will be in ETH",
+				"tags": [
+					"Transaction"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TxFeeQuery"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/tx/estimate-gas": {
+			"post": {
+				"operationId": "PostEstimateGas",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"estimateGas": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"estimateGas"
+									],
+									"type": "object"
+								},
+								"examples": {
+									"Example 1": {
+										"value": {
+											"estimateGas": "8993410"
+										}
+									}
+								}
+							}
+						}
+					}
+				},
+				"description": "Returns an estimate of the amount of gas that would be required to submit transaction to the network.\nAn estimate may not be accurate since there could be another transaction on the network that was not accounted for, but after being mined affected relevant state.",
+				"tags": [
+					"Transaction"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TxEstimateGasQuery"
+							}
+						}
+					}
+				}
+			}
+		},
+		"/tx/send": {
+			"post": {
+				"operationId": "PostSend",
+				"responses": {
+					"200": {
+						"description": "Ok",
+						"content": {
+							"application/json": {
+								"schema": {
+									"properties": {
+										"txHash": {
+											"type": "string"
+										}
+									},
+									"required": [
+										"txHash"
+									],
+									"type": "object"
+								}
+							}
+						}
+					}
+				},
+				"description": "Sends a transaction to the Gas Station contract.",
+				"tags": [
+					"Transaction"
+				],
+				"security": [],
+				"parameters": [],
+				"requestBody": {
+					"required": true,
+					"content": {
+						"application/json": {
+							"schema": {
+								"$ref": "#/components/schemas/TxSendQuery"
+							}
+						}
+					}
+				}
+			}
 		}
 	},
 	"servers": [
@@ -184,6 +469,9 @@
 		},
 		{
 			"name": "Gas"
+		},
+		{
+			"name": "Transaction"
 		}
 	]
 }

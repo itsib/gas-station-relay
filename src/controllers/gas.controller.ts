@@ -17,7 +17,7 @@ export class GasController extends BaseHttpController {
    *
    * @summary Gas price
    */
-  @Get()
+  @Get('/')
   @Example<GasSettings>({
     high: {
       maxFeePerGas: '3904221514',
