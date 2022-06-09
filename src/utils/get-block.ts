@@ -33,7 +33,7 @@ export async function getBlock(provider: BaseProvider, blockNumberOrTag: BlockTa
 
     timestamp: BigNumber.from(block.timestamp).toNumber(),
     nonce: block.nonce || block.number,
-    difficulty: difficulty.toNumber(),
+    difficulty: difficulty.toString() as any,
     _difficulty: difficulty,
 
     gasLimit: gasLimit,
