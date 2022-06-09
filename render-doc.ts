@@ -1,4 +1,21 @@
+import { ExtendedSpecConfig, generateSpec } from 'tsoa';
 
+(async () => {
+  const specOptions: ExtendedSpecConfig = {
+    name: 'Plasma Gas Station Relay Server.',
+    description: 'The relay server pays for gas for the user\'s transaction, takes ERC 20 tokens.',
+    basePath: '/',
+    entryFile: 'src/index.ts',
+    specVersion: 3,
+    outputDirectory: 'build',
+    controllerPathGlobs: [
+      'src/controllers/*.controller.ts'
+    ],
+    noImplicitAdditionalProperties: 'ignore',
+  };
+
+  await generateSpec(specOptions);
+})();
 
 
 // const showdown  = require('showdown');

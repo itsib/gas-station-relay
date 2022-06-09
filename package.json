@@ -16,7 +16,7 @@
     "dev": "ts-node ./src/index.ts",
     "dev:watch": "nodemon",
     "bump": "./node_modules/.bin/bump --tag --push --all",
-    "doc": "node ./render-doc.js",
+    "doc": "ts-node ./render-doc.ts",
     "clean": "rm -rf ./build"
   },
   "dependencies": {
