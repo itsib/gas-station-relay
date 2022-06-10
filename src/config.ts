@@ -1,3 +1,4 @@
+import { isAddress } from 'ethers/lib/utils';
 import { existsSync } from 'fs';
 import path from 'path';
 import { LogLevel } from './types';
@@ -14,10 +15,11 @@ export const CONFIG = {
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
   // Chain settings
   RPC_URL: required(process.env.RPC_URL, 'The environment variable RPC_URL is not set.'),
-  FEE_PAYER_WALLET_KEY: required(process.env.FEE_PAYER_WALLET_KEY, 'The environment variable FEE_PAYER_WALLET_KEY is not set.'),
-  GAS_STATION_CONTRACT_ADDRESS: required(process.env.GAS_STATION_CONTRACT_ADDRESS, 'The environment variable GAS_STATION_CONTRACT_ADDRESS is not set.'),
+  FEE_PAYER_WALLET_KEY: process.env.FEE_PAYER_WALLET_KEY || undefined,
+  GAS_STATION_CONTRACT_ADDRESS: validateAddress(process.env.GAS_STATION_CONTRACT_ADDRESS, false, 'The environment variable GAS_STATION_CONTRACT_ADDRESS is not set.'),
+  GAS_PRICE_ORACLE_CONTRACT: '0x420000000000000000000000000000000000000f',
   // Gas settings
-  GAS_CACHE_TIMEOUT: Number(process.env.GAS_CACHE_TIMEOUT) || 30,
+  GAS_CACHE_TIMEOUT: Number(process.env.GAS_CACHE_TIMEOUT) || 10,
   FEE_PER_GAS_MULTIPLIER: Number(process.env.FEE_PER_GAS_MULTIPLIER) || 1,
   ESTIMATE_GAS_MULTIPLIER: Number(process.env.ESTIMATE_GAS_MULTIPLIER) || 1,
 }
@@ -51,6 +53,19 @@ function validateEnum<T extends string>(enumerate: T[], value: string, defaultVa
     return value as T;
   }
   throw new Error(errorMessage || `Values are supported ${enumerate.join(',')}`);
+}
+
+function validateAddress(value?: string, isRequired: boolean = false, errorMessage?: string): string | undefined {
+  if (!value) {
+    if (isRequired) {
+      throw new Error(errorMessage || `Address is required`);
+    }
+    return undefined;
+  }
+  if (!isAddress(value)) {
+    throw new Error('Invalid wallet address');
+  }
+  return value;
 }
 
 function validateInteger(value: string, defaultValue: string, errorMessage?: string): string {

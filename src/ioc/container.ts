@@ -4,7 +4,7 @@ import { Container } from 'inversify';
 import { join } from 'path';
 import { CONFIG } from '../config';
 import { sync } from 'glob';
-import { GasService, IGasService, IRpcService, RpcService } from '../services';
+import { GasService, IGasService, ITxService, TxService } from '../services';
 
 /**
  * Dynamic import all controllers
@@ -18,7 +18,7 @@ sync(join(__dirname,'../controllers' ,'**', `*.controller.${ext}`)).forEach((fil
 const container = new Container({ defaultScope: 'Singleton' });
 
 container.bind<BaseProvider>('BaseProvider').toConstantValue(getDefaultProvider(CONFIG.RPC_URL));
-container.bind<IRpcService>('RpcService').to(RpcService);
+container.bind<ITxService>('TxService').to(TxService);
 container.bind<IGasService>('GasService').to(GasService);
 
 export { container };

@@ -2,7 +2,7 @@ import { Interface } from '@ethersproject/abi';
 import { Block, Log } from '@ethersproject/abstract-provider';
 import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
-import { BadRequest, InternalServerError } from '@tsed/exceptions';
+import { BadRequest, InternalServerError, ServiceUnvailable } from '@tsed/exceptions';
 import { Big } from 'big.js';
 import { BigNumber, Contract, utils, Wallet } from 'ethers';
 import { formatEther, hexlify } from 'ethers/lib/utils';
@@ -19,7 +19,7 @@ import { GasService } from './gas.service';
 const APPROVE_METHOD_HASH = '0x095ea7b3';
 const RECIPIENT_INTERFACE = new Interface(RECIPIENT_ABI as any);
 
-export interface IRpcService {
+export interface ITxService {
   relayInfo: () => Promise<RelayInfo>;
   estimateGas: (from: string, to: string, data: string, token: string) => Promise<{ estimateGas: string }>;
   transactionFee: (from: string, to: string, data: string, value: string, feePerGas: string, token?: string) => Promise<{ fee: string; currency: string }>;
@@ -27,14 +27,17 @@ export interface IRpcService {
 }
 
 @injectable()
-export class RpcService implements IRpcService {
-
-  private readonly _initialization: Promise<void>;
+export class TxService implements ITxService {
+  /**
+   * Returns whether the service is ready to work or not.
+   * @private
+   */
+  private readonly _isReady: Promise<boolean>;
   /**
    * Fee payer wallet
    * @private
    */
-  private readonly _wallet: Wallet;
+  private readonly _wallet?: Wallet;
   /**
    * Saved addresses of contracts that support the pay fee with tokens
    * @private
@@ -49,12 +52,12 @@ export class RpcService implements IRpcService {
    * A contract that directly executes the transaction and exchanges fee tokens for ETH
    * @private
    */
-  private _gasStationContract: Contract;
+  private _gasStationContract?: Contract;
   /**
    * Contract to exchange fee tokens to native currency
    * @private
    */
-  private _exchangeContract: Contract;
+  private _exchangeContract?: Contract;
   /**
    * Commission for the execution of the transaction.
    * @private
@@ -62,46 +65,71 @@ export class RpcService implements IRpcService {
   private _txRelayFeePercent: string;
 
   constructor(@inject('BaseProvider') private _provider: BaseProvider, @inject('GasService') private _gasService: GasService) {
-    this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
-    this._gasPriceOracleContract = new Contract('0x420000000000000000000000000000000000000f', GAS_PRICE_ORACLE_ABI, this._provider);
     this._gasStationSupports = {};
+    this._gasPriceOracleContract = new Contract(CONFIG.GAS_PRICE_ORACLE_CONTRACT, GAS_PRICE_ORACLE_ABI, this._provider);
 
-    this._initialization = new Promise(async (resolve: () => void) => {
-      logger.debug(`RPC Service initialization...`);
+    if (!CONFIG.FEE_PAYER_WALLET_KEY || !CONFIG.GAS_STATION_CONTRACT_ADDRESS) {
+      logger.error(`To process transactions, you need to fill in the environment variables FEE_PAYER_WALLET_KEY and GAS_STATION_CONTRACT_ADDRESS.`);
+      this._isReady = Promise.resolve(false);
+      return;
+    }
 
+    try {
+      this._wallet = new Wallet(CONFIG.FEE_PAYER_WALLET_KEY, this._provider);
+    } catch (e) {
+      logger.error(`Invalid private key FEE_PAYER_WALLET_KEY.`);
+      this._isReady = Promise.resolve(false);
+      return;
+    }
+
+    try {
       this._gasStationContract = new Contract(CONFIG.GAS_STATION_CONTRACT_ADDRESS, GAS_STATION_ABI, this._wallet);
+    } catch (e) {
+      logger.error(`Invalid gas station contract address GAS_STATION_CONTRACT_ADDRESS.`);
+      this._isReady = Promise.resolve(false);
+      return;
+    }
 
-      const [exchange, feePercent, balance]: [string, BigNumber, BigNumber] = await Promise.all([
-        this._gasStationContract.exchange(),
-        this._gasStationContract.txRelayFeePercent(),
-        this._wallet.getBalance('latest'),
-      ]);
+    this._isReady = new Promise(async (resolve: (isReady: boolean) => void) => {
+      try {
+        logger.debug(`TX Service initialization...`);
 
-      this._txRelayFeePercent = feePercent.toString();
-      this._exchangeContract = new Contract(exchange, EXCHANGE_ABI, this._wallet);
+        const [exchange, feePercent, balance]: [string, BigNumber, BigNumber] = await Promise.all([
+          this._gasStationContract.exchange(),
+          this._gasStationContract.txRelayFeePercent(),
+          this._wallet.getBalance('latest'),
+        ]);
 
-      logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
-      logger.debug(`Fee Payer Balance: ${formatEther(balance)} ETH`);
-      logger.debug(`Gas Station Contract: ${this._gasStationContract.address}`);
-      logger.debug(`Exchange Contract: ${this._exchangeContract.address}`);
-      logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent}%`);
+        this._txRelayFeePercent = feePercent.toString();
+        this._exchangeContract = new Contract(exchange, EXCHANGE_ABI, this._wallet);
 
-      // Subscribe to change contract state events
-      const address = this._gasStationContract.address;
+        logger.debug(`Fee Payer Wallet: ${this._wallet.address}`);
+        logger.debug(`Fee Payer Balance: ${formatEther(balance)} ETH`);
+        logger.debug(`Gas Station Contract: ${this._gasStationContract.address}`);
+        logger.debug(`Exchange Contract: ${this._exchangeContract.address}`);
+        logger.debug(`Tx Relay Fee Percent: ${this._txRelayFeePercent}%`);
 
-      this._provider.on({ address, topics: [utils.id('GasStationExchangeUpdated(address)')] }, (log: Log) => {
-        const { args: { newExchange } } = this._gasStationContract.interface.parseLog(log);
-        this._exchangeContract = new Contract(newExchange, new Interface(EXCHANGE_ABI), this._wallet);
-        logger.debug(`Exchange Contract was updated: ${newExchange}`);
-      });
+        // Subscribe to change contract state events
+        const address = this._gasStationContract.address;
 
-      this._provider.on({ address, topics: [utils.id('GasStationTxRelayFeePercentUpdated(uint256)')] }, (log: Log) => {
-        const { args: { newTxRelayFeePercent } } = this._gasStationContract.interface.parseLog(log);
-        this._txRelayFeePercent = newTxRelayFeePercent.toString();
-        logger.debug(`Tx Relay Fee Percent was updated: ${this._txRelayFeePercent}%`);
-      });
+        this._provider.on({ address, topics: [utils.id('GasStationExchangeUpdated(address)')] }, (log: Log) => {
+          const { args: { newExchange } } = this._gasStationContract.interface.parseLog(log);
+          this._exchangeContract = new Contract(newExchange, new Interface(EXCHANGE_ABI), this._wallet);
+          logger.debug(`Exchange Contract was updated: ${newExchange}`);
+        });
 
-      resolve();
+        this._provider.on({ address, topics: [utils.id('GasStationTxRelayFeePercentUpdated(uint256)')] }, (log: Log) => {
+          const { args: { newTxRelayFeePercent } } = this._gasStationContract.interface.parseLog(log);
+          this._txRelayFeePercent = newTxRelayFeePercent.toString();
+          logger.debug(`Tx Relay Fee Percent was updated: ${this._txRelayFeePercent}%`);
+        });
+
+        resolve(true);
+      } catch (e) {
+        logger.error(`TX Service initialization error`);
+        logger.error(e);
+        resolve(false);
+      }
     });
   }
 
@@ -109,7 +137,7 @@ export class RpcService implements IRpcService {
    * Common relay info
    */
   public async relayInfo(): Promise<RelayInfo> {
-    await this._initialization;
+    await this._checkReadiness();
 
     const [network, balance, feeTokens]: [Network, BigNumber, string[]] = await Promise.all([
       this._provider.getNetwork(),
@@ -134,8 +162,6 @@ export class RpcService implements IRpcService {
    * @param token
    */
   public async estimateGas(from: string, to: string, data: string, value: string, token?: string): Promise<{ estimateGas: string }> {
-    await this._initialization;
-
     // Estimate gas with gas station
     if (token && await this._hasSupportFeeInTokens(to, data, value)) {
       const [relayEstimateGas, txEstimateGas]: [BigNumber, BigNumber] = await Promise.all([
@@ -171,8 +197,6 @@ export class RpcService implements IRpcService {
    * @param token
    */
   public async transactionFee(from: string, to: string, data: string, value: string, feePerGas: string, token?: string): Promise<TxFeeResult> {
-    await this._initialization;
-
     const [{ estimateGas }, l1Fee] = await Promise.all([this.estimateGas(from, to, data, value, token), this._getL1GasCost(data)]);
 
     if (token && await this._hasSupportFeeInTokens(to, data, value)) {
@@ -198,7 +222,7 @@ export class RpcService implements IRpcService {
    * @param signature
    */
   public async sendTransaction(tx: TxSendQueryInfo, fee: TxSendQueryFee, signature: string): Promise<{ txHash: string }> {
-    await this._initialization;
+    await this._checkReadiness();
 
     const [block, feePerGas]: [Block, string] = await Promise.all([
       this._provider.getBlock('latest'),
@@ -279,10 +303,9 @@ export class RpcService implements IRpcService {
    * @param value
    */
   private async _hasSupportFeeInTokens(to?: string, data?: string, value?: string): Promise<boolean> {
-    if (!to || !data || hexlify(data).startsWith(APPROVE_METHOD_HASH) || (value && BigNumber.from(value).gt(0))) {
-      return false;
-    }
-    if (!this._gasStationContract) {
+    const isReady = await this._isReady;
+
+    if (!isReady || !this._gasStationContract || !to || !data || hexlify(data).startsWith(APPROVE_METHOD_HASH) || (value && BigNumber.from(value).gt(0))) {
       return false;
     }
     const contractAddress = isAddress(to);
@@ -321,5 +344,16 @@ export class RpcService implements IRpcService {
 
     const l1Fee = await this._gasPriceOracleContract.getL1Fee(data);
     return l1Fee.toString();
+  }
+
+  /**
+   * Readiness check of service, and throw 500 error, if not ready.
+   * @private
+   */
+  private async _checkReadiness(): Promise<void> {
+    const isReady = await this._isReady;
+    if (!isReady) {
+      throw new ServiceUnvailable('The server is not configured');
+    }
   }
 }

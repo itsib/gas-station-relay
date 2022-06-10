@@ -2,8 +2,6 @@ import winston from 'winston';
 import chalk from 'chalk';
 import { CONFIG } from '../config';
 
-const isDev = CONFIG.NODE_ENV === 'development';
-
 const logSimpleFormat = winston.format.printf(({ level, message }) => `[${chalk.bold(level.toUpperCase())}]: ${message}`);
 
 const logPrettyFormat = winston.format.printf(({ timestamp, level, message }) => {
@@ -32,7 +30,7 @@ const logger = winston.createLogger({
   level: CONFIG.LOG_LEVEL,
   format: winston.format.combine(
     winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-    isDev ? logPrettyFormat : logSimpleFormat,
+    CONFIG.NODE_ENV === 'development' ? logPrettyFormat : logSimpleFormat,
   ),
   transports: [
     new winston.transports.Console(),

@@ -1,14 +1,14 @@
 import { inject } from 'inversify';
 import { BaseHttpController, controller, httpGet } from 'inversify-express-utils';
 import { Example, Get, Route, Tags } from 'tsoa';
-import { RpcService } from '../services';
+import { TxService } from '../services';
 import { RelayInfo } from '../types';
 
 @Route('info')
 @controller('/info')
 export class InfoController extends BaseHttpController {
 
-  constructor( @inject('RpcService') private _rpcService: RpcService ) {
+  constructor( @inject('TxService') private _txService: TxService ) {
     super();
   }
 
@@ -27,6 +27,6 @@ export class InfoController extends BaseHttpController {
   @Tags('Info')
   @httpGet('/')
   async getInfo(): Promise<RelayInfo> {
-    return await this._rpcService.relayInfo();
+    return await this._txService.relayInfo();
   }
 }
