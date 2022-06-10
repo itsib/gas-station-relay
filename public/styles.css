@@ -288,6 +288,10 @@ hr {
     content: ":";
     color: #a9b7c6 !important;
 }
+.swagger-ui table.model tr.property-row td:last-child .prop-name {
+    margin-right: 4px;
+    color: white !important;
+}
 .swagger-ui table.model tr.property-row td:last-child .prop-type {
     color: #cc7832 !important;
 }

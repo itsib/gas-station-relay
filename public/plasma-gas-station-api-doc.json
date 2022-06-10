@@ -18,7 +18,8 @@
 						"type": "string"
 					},
 					"confirmationTime": {
-						"type": "string"
+						"type": "string",
+						"description": "Approximate transaction confirmation time, with current parameters. In seconds."
 					}
 				},
 				"type": "object",
@@ -36,7 +37,8 @@
 						"$ref": "#/components/schemas/GasSettingsBySpeed"
 					},
 					"avgBlockTime": {
-						"type": "string"
+						"type": "string",
+						"description": "Average block processing time in the blockchain"
 					}
 				},
 				"required": [
@@ -52,19 +54,25 @@
 				"properties": {
 					"chainId": {
 						"type": "number",
-						"format": "double"
+						"format": "int",
+						"description": "The ID of the blockchain. 1 для mainnet, 137 - polygon, 56 - finance smart chain, etc."
 					},
 					"gasStation": {
-						"type": "string"
+						"type": "string",
+						"description": "Gas station contract address",
+						"format": "address"
 					},
 					"feeTokens": {
 						"items": {
 							"type": "string"
 						},
-						"type": "array"
+						"type": "array",
+						"description": "Addresses of tokens that support gas payment."
 					},
 					"balance": {
-						"type": "string"
+						"type": "string",
+						"description": "The balance of the relay wallet",
+						"format": "int256"
 					}
 				},
 				"required": [
@@ -98,11 +106,13 @@
 				"properties": {
 					"from": {
 						"type": "string",
-						"description": "The address from which the transaction is sent"
+						"description": "The address from which the transaction is sent",
+						"format": "address"
 					},
 					"to": {
 						"type": "string",
-						"description": "The address of the contract or user where the transaction will be sent"
+						"description": "The address of the contract or user where the transaction will be sent",
+						"format": "address"
 					},
 					"data": {
 						"type": "string",
@@ -236,7 +246,7 @@
 	},
 	"info": {
 		"title": "Plasma Gas Station Relay Server.",
-		"version": "1.2.4",
+		"version": "1.2.6",
 		"description": "The relay server pays for gas for the user's transaction, takes ERC 20 tokens."
 	},
 	"openapi": "3.0.0",

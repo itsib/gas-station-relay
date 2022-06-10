@@ -1,10 +1,12 @@
 export interface TxFeeQuery {
   /**
    * The address from which the transaction is sent
+   * @format address
    */
   from: string;
   /**
    * The address of the contract or user where the transaction will be sent
+   * @format address
    */
   to: string;
   /**
