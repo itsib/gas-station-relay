@@ -1,7 +1,6 @@
-import { Method } from 'axios';
 import { existsSync } from 'fs';
 import path from 'path';
-import { BaseOfNumber, LogLevel } from './types';
+import { LogLevel } from './types';
 
 require('dotenv').config(dotenvConfig());
 
@@ -17,7 +16,8 @@ export const CONFIG = {
   RPC_URL: required(process.env.RPC_URL, 'The environment variable RPC_URL is not set.'),
   FEE_PAYER_WALLET_KEY: required(process.env.FEE_PAYER_WALLET_KEY, 'The environment variable FEE_PAYER_WALLET_KEY is not set.'),
   GAS_STATION_CONTRACT_ADDRESS: required(process.env.GAS_STATION_CONTRACT_ADDRESS, 'The environment variable GAS_STATION_CONTRACT_ADDRESS is not set.'),
-  // Gas multipliers
+  // Gas settings
+  GAS_CACHE_TIMEOUT: Number(process.env.GAS_CACHE_TIMEOUT) || 30,
   FEE_PER_GAS_MULTIPLIER: Number(process.env.FEE_PER_GAS_MULTIPLIER) || 1,
   ESTIMATE_GAS_MULTIPLIER: Number(process.env.ESTIMATE_GAS_MULTIPLIER) || 1,
 }

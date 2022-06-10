@@ -3,7 +3,9 @@ import { default as axios, Method } from 'axios';
 import { Big } from 'big.js';
 import { suggestFees } from 'eip1559-fee-suggestions-ethers';
 import { inject, injectable } from 'inversify';
+import { CONFIG } from '../config';
 import { GasSettings } from '../types';
+import { logger } from '../utils';
 import { getBlock } from '../utils/get-block';
 
 export interface IGasService {
@@ -12,10 +14,21 @@ export interface IGasService {
 
 @injectable()
 export class GasService implements IGasService {
+  private _gasCacheTimestamp: number;
+  private _gasCache?: Promise<GasSettings>;
 
-  constructor(@inject('BaseProvider') private _provider: BaseProvider) {}
+  constructor(@inject('BaseProvider') private _provider: BaseProvider) {
+    this._gasCacheTimestamp = 0;
+  }
 
   async getGasSettings(): Promise<GasSettings> {
+    const currentTimestamp = Date.now();
+    if (this._gasCache && currentTimestamp - CONFIG.GAS_CACHE_TIMEOUT * 1000 < this._gasCacheTimestamp) {
+      logger.debug('Response gas from cache');
+      return this._gasCache;
+    }
+    this._gasCacheTimestamp = currentTimestamp;
+
     const { chainId } = await this._provider.getNetwork();
     switch (chainId) {
       case 1:       // Mainnet
@@ -25,18 +38,24 @@ export class GasService implements IGasService {
       case 42:      // Kovan
       case 137:     // Polygon
       case 80001:   // Mumbai (Polygon testnet)
-        return this._getEthereumGasSettings();
+        this._gasCache = this._getEthereumGasSettings();
+        break;
       case 56:      // Binance Smart Chain
       case 97:      // Binance Smart Chain (Testnet)
-        return this._getBinanceGasSettings();
+        this._gasCache = this._getBinanceGasSettings();
+        break;
       case 250:     // Fantom
-        return this._getFantomGasSettings();
+        this._gasCache = this._getFantomGasSettings();
+        break;
       case 10:      // Optimism
       case 69:      // Optimism Kovan
-        return this._getOptimismGasSettings();
+        this._gasCache = this._getOptimismGasSettings();
+        break;
       default:
-        return this._getDefaultGasSettings();
+        this._gasCache = this._getDefaultGasSettings();
     }
+
+    return this._gasCache;
   }
 
   private async _getEthereumGasSettings(): Promise<GasSettings> {
