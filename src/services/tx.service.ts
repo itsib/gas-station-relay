@@ -2,7 +2,7 @@ import { Interface } from '@ethersproject/abi';
 import { Block, Log } from '@ethersproject/abstract-provider';
 import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
-import { BadRequest, InternalServerError, ServiceUnvailable } from '@tsed/exceptions';
+import { BadRequest, ServiceUnvailable } from '@tsed/exceptions';
 import { Big } from 'big.js';
 import { BigNumber, Contract, utils, Wallet } from 'ethers';
 import { formatEther, hexlify } from 'ethers/lib/utils';
@@ -13,7 +13,7 @@ import GAS_STATION_ABI from '../abi/gas-station.json';
 import RECIPIENT_ABI from '../abi/recipient.json';
 import { CONFIG } from '../config';
 import { RelayInfo, TxFeeResult, TxSendQueryFee, TxSendQueryInfo } from '../types';
-import { isAddress, logger, parseRpcCallError } from '../utils';
+import { isAddress, logger } from '../utils';
 import { GasService } from './gas.service';
 
 const APPROVE_METHOD_HASH = '0x095ea7b3';
@@ -243,27 +243,17 @@ export class TxService implements ITxService {
     };
 
     // We check whether the transaction completes successfully.
-    try {
-      logger.debug(`Transaction verification by calling eth_call`);
-      await this._gasStationContract.callStatic.sendTransaction(tx, { ...fee, feePerGas }, signature, txOptions);
-    } catch (e) {
-      console.error(e);
-      const error = parseRpcCallError(e);
-      throw new InternalServerError(error ? error.message : e.message, error || e);
-    }
+    logger.debug(`Transaction verification by calling eth_call`);
+    await this._gasStationContract.callStatic.sendTransaction(tx, { ...fee, feePerGas }, signature, txOptions);
 
     // Send client's transaction
-    try {
-      logger.debug(`Transaction sending`);
-      const transaction = await this._gasStationContract.sendTransaction(tx, {
-        ...fee,
-        feePerGas,
-      }, signature, txOptions);
-      logger.debug(`Transaction sent ${transaction.hash}`);
-      return { txHash: transaction.hash };
-    } catch (e) {
-      throw new InternalServerError(e.message, e);
-    }
+    logger.debug(`Transaction sending`);
+    const transaction = await this._gasStationContract.sendTransaction(tx, {
+      ...fee,
+      feePerGas,
+    }, signature, txOptions);
+    logger.debug(`Transaction sent ${transaction.hash}`);
+    return { txHash: transaction.hash };
   }
 
   /**
