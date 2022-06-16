@@ -6,7 +6,6 @@ import { inject, injectable } from 'inversify';
 import { CONFIG } from '../config';
 import { GasSettings } from '../types';
 import { logger } from '../utils';
-import { getBlock } from '../utils/get-block';
 
 export interface IGasService {
   getGasSettings: () => Promise<any>;
@@ -63,8 +62,8 @@ export class GasService implements IGasService {
       const [ count, ...otherArgs ] = args;
       return (this._provider as any).send(method, [`0x${count.toString(16)}`, ...otherArgs]);
     }
-    const lastBlock = await getBlock(this._provider);
-    const [pastBlock, suggestedFees] = await Promise.all([getBlock(this._provider, lastBlock.number - 1000), suggestFees({ send } as any)]);
+    const lastBlock = await this._provider.getBlock('latest');
+    const [pastBlock, suggestedFees] = await Promise.all([this._provider.getBlock(lastBlock.number - 1000), suggestFees({ send } as any)]);
 
     const { baseFeeSuggestion, maxPriorityFeeSuggestions, confirmationTimeByPriorityFee } = suggestedFees;
     const avgBlockTime = Big(lastBlock.timestamp).minus(pastBlock.timestamp).div(1000).toString();
@@ -106,8 +105,8 @@ export class GasService implements IGasService {
   }
 
   private async _getBinanceGasSettings(): Promise<GasSettings> {
-    const lastBlock = await getBlock(this._provider, 'latest');
-    const [pastBlock, gasPrice] = await Promise.all([getBlock(this._provider, lastBlock.number - 1000), this._provider.getGasPrice()]);
+    const lastBlock = await this._provider.getBlock('latest');
+    const [pastBlock, gasPrice] = await Promise.all([this._provider.getBlock(lastBlock.number - 1000), this._provider.getGasPrice()]);
     const avgBlockTime = Big(lastBlock.timestamp).minus(pastBlock.timestamp).div(1000).toString();
 
     return {
@@ -126,7 +125,7 @@ export class GasService implements IGasService {
 
   private async _getFantomGasSettings(): Promise<GasSettings> {
     try {
-      const lastBlock = await getBlock(this._provider, 'latest');
+      const lastBlock = await this._provider.getBlock('latest');
       const query = {
         url: 'https://gftm.blockscan.com/gasapi.ashx?apikey=key&method=pendingpooltxgweidata',
         method: 'GET' as Method,
@@ -134,7 +133,7 @@ export class GasService implements IGasService {
           'content-type': 'application/json; charset=utf-8',
         },
       };
-      const [pastBlock, response] = await Promise.all([getBlock(this._provider, lastBlock.number - 1000), axios.request(query)]);
+      const [pastBlock, response] = await Promise.all([this._provider.getBlock(lastBlock.number - 1000), axios.request(query)]);
       const avgBlockTime = Big(lastBlock.timestamp).minus(pastBlock.timestamp).div(1000).toString();
 
       const baseFeePerGas = Big(lastBlock.baseFeePerGas.toString()).times(1.2).round(0);
@@ -170,8 +169,8 @@ export class GasService implements IGasService {
   }
 
   private async _getOptimismGasSettings(): Promise<GasSettings> {
-    const lastBlock = await getBlock(this._provider, 'latest');
-    const [pastBlock, gasPrice] = await Promise.all([getBlock(this._provider, lastBlock.number - 1000), this._provider.getGasPrice()]);
+    const lastBlock = await this._provider.getBlock('latest');
+    const [pastBlock, gasPrice] = await Promise.all([this._provider.getBlock(lastBlock.number - 1000), this._provider.getGasPrice()]);
     const avgBlockTime = Big(lastBlock.timestamp).minus(pastBlock.timestamp).div(1000).toString();
 
     return {
@@ -189,12 +188,12 @@ export class GasService implements IGasService {
   }
 
   private async _getDefaultGasSettings(): Promise<GasSettings> {
-    const lastBlock = await getBlock(this._provider, 'latest');
+    const lastBlock = await this._provider.getBlock('latest');
     if (lastBlock.baseFeePerGas) {
       return this._getEthereumGasSettings();
     }
 
-    const [pastBlock, gasPrice] = await Promise.all([getBlock(this._provider, lastBlock.number - 1000), this._provider.getGasPrice()]);
+    const [pastBlock, gasPrice] = await Promise.all([this._provider.getBlock( lastBlock.number - 1000), this._provider.getGasPrice()]);
     const avgBlockTime = Big(lastBlock.timestamp).minus(pastBlock.timestamp).div(1000).toString();
     const bGasPrice = Big(gasPrice.toString());
 
