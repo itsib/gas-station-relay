@@ -15,8 +15,6 @@ import { CONFIG } from '../config';
 import { RelayInfo, TxFeeResult, TxSendQueryFee, TxSendQueryInfo } from '../types';
 import { isAddress, logger } from '../utils';
 import { GasService } from './gas.service';
-import { version } from '../../package.json';
-
 
 const APPROVE_METHOD_HASH = '0x095ea7b3';
 const RECIPIENT_INTERFACE = new Interface(RECIPIENT_ABI as any);
@@ -152,7 +150,6 @@ export class TxService implements ITxService {
       gasStation: this._gasStationContract.address,
       feeTokens: feeTokens,
       balance: balance.toString(),
-      version,
     }
   }
 

@@ -1,5 +1,8 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
+    "rootDir": "src",
+    "outDir": "build",
     "target": "es5",
     "lib": [
       "es6",
@@ -18,16 +21,14 @@
     "pretty": true,
     "sourceMap": true,
     "declaration": true,
-    "outDir": "build",
     "allowJs": true,
     "esModuleInterop": true,
-    "resolveJsonModule": true,
-    "baseUrl": "."
+    "resolveJsonModule": true
   },
   "include": [
     "src/**/*.ts",
     "src/**/*.json",
-    ".env"
+    ".env",
   ],
   "exclude": [
     "node_modules"

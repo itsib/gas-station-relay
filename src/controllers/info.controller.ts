@@ -23,7 +23,6 @@ export class InfoController extends BaseHttpController {
     gasStation: '0x280c78D5829Ad6E2403d6ae49BCf85f1D2119E0d',
     feeTokens: ['0xdAC17F958D2ee523a2206206994597C13D831ec7', '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48'],
     balance: '242392145778186007',
-    version: '1.3.0',
   })
   @Tags('Info')
   @httpGet('/')
