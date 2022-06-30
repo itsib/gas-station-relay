@@ -11,7 +11,6 @@ export function parseRpcCallError(error: any): HTTPException {
   }
 
   return new HTTPException(500, error.reason || error.message);
-  return error;
 
   // const serverError = getServerError(error);
   // if (!serverError) {
