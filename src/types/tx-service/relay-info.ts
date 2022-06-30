@@ -18,4 +18,8 @@ export interface RelayInfo {
    * @format int256
    */
   balance: string;
+  /**
+   * Relay version, from package.json
+   */
+  version: string;
 }
