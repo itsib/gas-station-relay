@@ -57,6 +57,7 @@ async function startApp(): Promise<void> {
   app.listen(CONFIG.PORT, () => {
     logger.info(`ENV: ${CONFIG.NODE_ENV}`);
     logger.info(`LOG_LEVEL: ${CONFIG.LOG_LEVEL}`);
+    logger.info(`RPC_URL: ${CONFIG.RPC_URL}`);
     logger.info(`App listening on the port ${CONFIG.PORT}`);
   });
 }
