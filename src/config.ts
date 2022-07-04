@@ -10,7 +10,6 @@ export const CONFIG = {
   LOG_LEVEL: validateEnum<LogLevel>([LogLevel.ERROR, LogLevel.WARN, LogLevel.DEBUG, LogLevel.INFO], process.env.LOG_LEVEL, LogLevel.DEBUG),
   NODE_ENV: process.env.NODE_ENV || 'development',
   PORT: Number(process.env.PORT) || 3000,
-  BASE_PATH: process.env.BASE_PATH || '/',
   CORS_CREDENTIALS: process.env.CORS_CREDENTIALS === 'true',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
   // Chain settings

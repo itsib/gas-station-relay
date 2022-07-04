@@ -10,7 +10,7 @@
   "author": "Sergey<itsib.su@gmail.com>",
   "main": "index.js",
   "scripts": {
-    "build": "npm run clean && tsc",
+    "build": "npm run clean && npm run doc && tsc",
     "build:docker": "npm run build && ./build.sh",
     "start": "node ./build/index.js",
     "dev": "ts-node ./src/index.ts",
