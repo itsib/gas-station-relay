@@ -1,6 +1,14 @@
 import { HTTPException } from '@tsed/exceptions';
 
 export function parseRpcCallError(error: any): HTTPException {
+  if (error.code === 'UNPREDICTABLE_GAS_LIMIT') {
+    try {
+      const errorBody = JSON.parse(error.error.body);
+      return new HTTPException(500, errorBody.error.message);
+    } catch (e) {
+      return new HTTPException(500, error.reason);
+    }
+  }
   if (error.code === 'INSUFFICIENT_FUNDS') {
     return new HTTPException(500, 'Insufficient funds for intrinsic transaction cost');
   }
