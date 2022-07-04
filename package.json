@@ -1,6 +1,6 @@
 {
   "name": "gas-station-relay",
-  "version": "1.3.4",
+  "version": "1.3.5",
   "description": "The relay server pays for gas for the user's transaction, takes ERC 20 tokens.",
   "license": "MIT",
   "repository": {
