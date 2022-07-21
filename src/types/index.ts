@@ -1,6 +1,5 @@
 export * from './common/log-level';
 export * from './common/rpc-error';
-export * from './common/provider';
 export * from './common/network-config';
 
 export * from './tx-service/relay-info';

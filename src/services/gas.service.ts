@@ -3,8 +3,8 @@ import { Big } from 'big.js';
 import { suggestFees } from 'eip1559-fee-suggestions-ethers';
 import { inject, injectable } from 'inversify';
 import { CONFIG } from '../config';
-import { GasSettings, Provider } from '../types';
-import { logger } from '../utils';
+import { GasSettings } from '../types';
+import { logger, Provider } from '../utils';
 
 @injectable()
 export class GasService {

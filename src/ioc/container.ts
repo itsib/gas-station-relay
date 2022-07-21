@@ -3,8 +3,8 @@ import { Container } from 'inversify';
 import { join } from 'path';
 import { CONFIG } from '../config';
 import { GasService, TxService } from '../services';
-import { NetworkConfig, Provider } from '../types';
-import { getNetworkConfig, getProvider } from '../utils';
+import { NetworkConfig } from '../types';
+import { getNetworkConfig, Provider } from '../utils';
 
 /**
  * Dynamic import all controllers
@@ -20,7 +20,7 @@ export async function buildContainer(): Promise<Container> {
    */
   const container = new Container({ defaultScope: 'Singleton' });
 
-  container.bind<Provider>('Provider').toConstantValue(getProvider(networkConfig));
+  container.bind<Provider>('Provider').toConstantValue(new Provider(networkConfig));
   container.bind<TxService>('TxService').to(TxService);
   container.bind<GasService>('GasService').to(GasService);
 

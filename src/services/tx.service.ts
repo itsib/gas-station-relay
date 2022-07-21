@@ -1,7 +1,6 @@
 import { Interface } from '@ethersproject/abi';
 import { Block, Log } from '@ethersproject/abstract-provider';
 import { Network } from '@ethersproject/networks';
-import { BaseProvider } from '@ethersproject/providers';
 import { BadRequest, ServiceUnvailable } from '@tsed/exceptions';
 import { Big } from 'big.js';
 import { BigNumber, Contract, utils, Wallet } from 'ethers';
@@ -12,8 +11,8 @@ import GAS_PRICE_ORACLE_ABI from '../abi/gas-price-oracle.json';
 import GAS_STATION_ABI from '../abi/gas-station.json';
 import RECIPIENT_ABI from '../abi/recipient.json';
 import { CONFIG } from '../config';
-import { Provider, RelayInfo, TxFeeResult, TxSendQueryFee, TxSendQueryInfo } from '../types';
-import { isAddress, logger } from '../utils';
+import { RelayInfo, TxFeeResult, TxSendQueryFee, TxSendQueryInfo } from '../types';
+import { isAddress, logger, Provider } from '../utils';
 import { GasService } from './gas.service';
 
 const APPROVE_METHOD_HASH = '0x095ea7b3';
