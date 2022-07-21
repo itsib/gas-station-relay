@@ -48,15 +48,20 @@ export class Provider extends BaseProvider {
     };
     super(network);
 
-    this._providerConfigs = rpcUrls.map((url, index) => {
-      return {
-        index,
-        provider: getDefaultProvider(url),
-        weight: 1,
-        timeout: 5000,
-      }
-    });
-    this._highestBlockNumber = -1;
+    try {
+      this._providerConfigs = rpcUrls.map((url, index) => {
+        return {
+          index,
+          provider: getDefaultProvider(url),
+          weight: 1,
+          timeout: 5000,
+        }
+      });
+      this._highestBlockNumber = -1;
+    } catch (e) {
+      console.error(e);
+      throw e;
+    }
   }
 
   async detectNetwork(): Promise<Network> {
@@ -174,10 +179,11 @@ export class Provider extends BaseProvider {
             const providerConfig = this._providerConfigs.find(p => p.index === index);
             providerConfig.weight *= 0.99;
           });
-          config.weight = config.weight < 100 ? config.weight * 0.01 : config.weight;
+          config.weight = config.weight < 100 ? config.weight * 1.01 : config.weight;
           return result;
         });
       } catch (e) {
+        console.error(e);
         errors.push({ index: config.index, error: e });
       }
     }
