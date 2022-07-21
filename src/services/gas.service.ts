@@ -1,22 +1,17 @@
-import { BaseProvider } from '@ethersproject/providers';
 import { default as axios, Method } from 'axios';
 import { Big } from 'big.js';
 import { suggestFees } from 'eip1559-fee-suggestions-ethers';
 import { inject, injectable } from 'inversify';
 import { CONFIG } from '../config';
-import { GasSettings } from '../types';
+import { GasSettings, Provider } from '../types';
 import { logger } from '../utils';
 
-export interface IGasService {
-  getGasSettings: () => Promise<any>;
-}
-
 @injectable()
-export class GasService implements IGasService {
+export class GasService {
   private _gasCacheTimestamp: number;
   private _gasCache?: Promise<GasSettings>;
 
-  constructor(@inject('BaseProvider') private _provider: BaseProvider) {
+  constructor(@inject('Provider') private _provider: Provider) {
     this._gasCacheTimestamp = 0;
   }
 

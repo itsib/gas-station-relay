@@ -1,11 +1,27 @@
 import { Block, BlockTag } from '@ethersproject/abstract-provider';
-import { BaseProvider } from '@ethersproject/providers';
+import { FallbackProvider } from '@ethersproject/providers';
 import { BigNumber, getDefaultProvider } from 'ethers';
+import { CONFIG } from '../config';
+import { NetworkConfig, Provider } from '../types';
+import { logger } from './logger';
 
 const DEFAULT_BLOCK_GAS_LIMIT = BigNumber.from(20_000_000);
 
-export function getProvider(rpcUrl: string): BaseProvider {
-  const provider = getDefaultProvider(rpcUrl);
+export function getProvider(networkConfig: NetworkConfig): Provider {
+  const rpcUrls = networkConfig.rpc.reduce<string[]>((acc, rpcSource) => {
+    if (rpcSource.includes('${INFURA_API_KEY}')) {
+      if (CONFIG.INFURA_API_KEY) {
+        acc.push(rpcSource.replace('${INFURA_API_KEY}', CONFIG.INFURA_API_KEY));
+      } else {
+        logger.warn('INFURA_API_KEY not provided for RPC URL');
+      }
+    } else {
+      acc.push(rpcSource);
+    }
+    return acc;
+  }, []);
+  const providers = rpcUrls.map(url => getDefaultProvider(url));
+  const provider = new FallbackProvider(providers);
 
   provider.getBlock = async function (blockNumberOrTag: BlockTag): Promise<Block> {
     blockNumberOrTag = typeof blockNumberOrTag === 'number' ? `0x${blockNumberOrTag.toString(16)}` : blockNumberOrTag;

@@ -18,7 +18,7 @@ To build and run this project you need to have the following installed on your s
 - **CORS_CREDENTIALS** - Configures the Access-Control-Allow-Credentials CORS header. Set to true to pass the header, otherwise it is omitted. By default - *false*.
 - **CORS_ORIGIN** - Configures the Access-Control-Allow-Origin CORS header. If set origin to a specific origin. For example if you set it to "http://example.com" only requests from "http://example.com" will be allowed.
 #### Chain settings:
-- **RPC_URL** - (Required) The URL to a node on the network you wish to use. If you do not know what to put here, get a free [Infura account](https://infura.io/), create a project, and look at KEYS > ENDPOINTS for your network. Use the endpoint that starts with https://
+- **CHAIN_ID** - (Required) The Blockchain ID, RPL UPL will be selected automatically from the [list](https://raw.githubusercontent.com/plasmadlt/plasma-mobile-app/main/chainlist.json).
 - **FEE_PAYER_WALLET_KEY** - (Required) The private key of the wallet from which the transaction fee will be paid. And where the bonus will be credited for relaying  the transaction. There should be a positive ETH balance.
 - **GAS_STATION_CONTRACT_ADDRESS** - (Required) The address of the contract that performs the transaction. The whole logic of the fee calculation, signature verification, execution of a user transaction.
 

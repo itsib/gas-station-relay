@@ -13,7 +13,8 @@ export const CONFIG = {
   CORS_CREDENTIALS: process.env.CORS_CREDENTIALS === 'true',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
   // Chain settings
-  RPC_URL: required(process.env.RPC_URL, 'The environment variable RPC_URL is not set.'),
+  CHAIN_ID: Number(required(process.env.CHAIN_ID, 'The environment variable CHAIN_ID is not set.')),
+  INFURA_API_KEY: process.env.INFURA_API_KEY || undefined,
   FEE_PAYER_WALLET_KEY: process.env.FEE_PAYER_WALLET_KEY || undefined,
   GAS_STATION_CONTRACT_ADDRESS: validateAddress(process.env.GAS_STATION_CONTRACT_ADDRESS, false, 'The environment variable GAS_STATION_CONTRACT_ADDRESS is not set.'),
   GAS_PRICE_ORACLE_CONTRACT: '0x420000000000000000000000000000000000000f',

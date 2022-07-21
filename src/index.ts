@@ -1,4 +1,3 @@
-import './polyfills';
 import { NotFound } from '@tsed/exceptions';
 import compression from 'compression';
 import cors from 'cors';
@@ -6,8 +5,9 @@ import express, { Application } from 'express';
 import { InversifyExpressServer } from 'inversify-express-utils';
 import { resolve } from 'path';
 import { CONFIG } from './config';
-import { container } from './ioc/container';
+import { buildContainer } from './ioc/container';
 import { errorMiddleware, httpLogMiddleware } from './middlewares';
+import './polyfills';
 import { logger } from './utils';
 
 process.on('uncaughException', (e) => {
@@ -31,6 +31,8 @@ startApp().catch(e => {
 });
 
 async function startApp(): Promise<void> {
+  const container = await buildContainer();
+
   const server = new InversifyExpressServer(container);
 
   server.setConfig((app: Application) => {
@@ -57,7 +59,7 @@ async function startApp(): Promise<void> {
   app.listen(CONFIG.PORT, () => {
     logger.info(`ENV: ${CONFIG.NODE_ENV}`);
     logger.info(`LOG_LEVEL: ${CONFIG.LOG_LEVEL}`);
-    logger.info(`RPC_URL: ${CONFIG.RPC_URL}`);
+    logger.info(`CHAIN_ID: ${CONFIG.CHAIN_ID}`);
     logger.info(`App listening on the port ${CONFIG.PORT}`);
   });
 }

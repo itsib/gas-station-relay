@@ -12,22 +12,15 @@ import GAS_PRICE_ORACLE_ABI from '../abi/gas-price-oracle.json';
 import GAS_STATION_ABI from '../abi/gas-station.json';
 import RECIPIENT_ABI from '../abi/recipient.json';
 import { CONFIG } from '../config';
-import { RelayInfo, TxFeeResult, TxSendQueryFee, TxSendQueryInfo } from '../types';
+import { Provider, RelayInfo, TxFeeResult, TxSendQueryFee, TxSendQueryInfo } from '../types';
 import { isAddress, logger } from '../utils';
 import { GasService } from './gas.service';
 
 const APPROVE_METHOD_HASH = '0x095ea7b3';
 const RECIPIENT_INTERFACE = new Interface(RECIPIENT_ABI as any);
 
-export interface ITxService {
-  relayInfo: () => Promise<RelayInfo>;
-  estimateGas: (from: string, to: string, data: string, token: string) => Promise<{ estimateGas: string }>;
-  transactionFee: (from: string, to: string, data: string, value: string, feePerGas: string, token?: string) => Promise<{ fee: string; currency: string }>;
-  sendTransaction: (tx: TxSendQueryInfo, fee: TxSendQueryFee, signature: string) => Promise<{ txHash: string }>;
-}
-
 @injectable()
-export class TxService implements ITxService {
+export class TxService {
   /**
    * Returns whether the service is ready to work or not.
    * @private
@@ -64,7 +57,7 @@ export class TxService implements ITxService {
    */
   private _txRelayFeePercent: string;
 
-  constructor(@inject('BaseProvider') private _provider: BaseProvider, @inject('GasService') private _gasService: GasService) {
+  constructor(@inject('Provider') private _provider: Provider, @inject('GasService') private _gasService: GasService) {
     this._gasStationSupports = {};
     this._gasPriceOracleContract = new Contract(CONFIG.GAS_PRICE_ORACLE_CONTRACT, GAS_PRICE_ORACLE_ABI, this._provider);
 

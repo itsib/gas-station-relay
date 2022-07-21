@@ -12,7 +12,7 @@ const logPrettyFormat = winston.format.printf(({ timestamp, level, message }) =>
     case 'error':
       prettyLevel = chalk.red('[ERROR]');
       break;
-    case 'warm':
+    case 'warn':
       prettyLevel = chalk.yellow('[WARN]');
       break;
     case 'debug':

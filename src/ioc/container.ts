@@ -1,10 +1,10 @@
-import { BaseProvider } from '@ethersproject/providers';
 import { sync } from 'glob';
 import { Container } from 'inversify';
 import { join } from 'path';
 import { CONFIG } from '../config';
-import { GasService, IGasService, ITxService, TxService } from '../services';
-import { getProvider } from '../utils';
+import { GasService, TxService } from '../services';
+import { NetworkConfig, Provider } from '../types';
+import { getNetworkConfig, getProvider } from '../utils';
 
 /**
  * Dynamic import all controllers
@@ -12,13 +12,17 @@ import { getProvider } from '../utils';
 const [, ext] = __filename.match(/\.(\w+)$/);
 sync(join(__dirname, '../controllers', '**', `*.controller.${ext}`)).forEach((filename: string): void => require(filename));
 
-/**
- * Creates container that will contain all dependencies
- */
-const container = new Container({ defaultScope: 'Singleton' });
+export async function buildContainer(): Promise<Container> {
+  const networkConfig: NetworkConfig = await getNetworkConfig(CONFIG.CHAIN_ID);
 
-container.bind<BaseProvider>('BaseProvider').toConstantValue(getProvider(CONFIG.RPC_URL));
-container.bind<ITxService>('TxService').to(TxService);
-container.bind<IGasService>('GasService').to(GasService);
+  /**
+   * Creates container that will contain all dependencies
+   */
+  const container = new Container({ defaultScope: 'Singleton' });
 
-export { container };
+  container.bind<Provider>('Provider').toConstantValue(getProvider(networkConfig));
+  container.bind<TxService>('TxService').to(TxService);
+  container.bind<GasService>('GasService').to(GasService);
+
+  return container;
+}
