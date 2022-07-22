@@ -1,6 +1,7 @@
+import { Block } from '@ethersproject/abstract-provider';
 import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
-import { getDefaultProvider } from 'ethers';
+import { BigNumber, getDefaultProvider } from 'ethers';
 import { CONFIG } from '../config';
 import { NetworkConfig } from '../types';
 import { cancelPromiseByTimeout, TimeoutError } from './cancel-promise-by-timeout';
@@ -8,6 +9,7 @@ import { formatBlock } from './format-block';
 import { getPromiseState } from './get-promise-state';
 import { logger } from './logger';
 
+const BLOCK_CACHE_TIMEOUT = 60 * 1000; // The time of storing the blocks in the cache
 const BLOCK_NUMBER_CACHE_TIMEOUT = 3000; // The time of storing the block number in the cache
 const CHAIN_ID_CACHE_TIMEOUT = 30 * 60000; // The storage time of the chain id in the cache
 const NETWORK_CACHE_TIMEOUT = 20 * 60000; // We update the network data no more than once every 20 minutes.
@@ -42,6 +44,11 @@ export class Provider extends BaseProvider {
    * @private
    */
   private _chainIdCache?: Promise<string>;
+  /**
+   * Saved and indexed blocks by number.
+   * @private
+   */
+  private _blockCache: { [blockNumber: number]: Promise<Block> };
 
   constructor(networkConfig: NetworkConfig) {
     const rpcUrls = networkConfig.rpc.reduce<string[]>((acc, rpcSource) => {
@@ -77,6 +84,8 @@ export class Provider extends BaseProvider {
         weight: 1,
       }
     });
+
+    this._blockCache = {};
   }
 
   /**
@@ -186,10 +195,9 @@ export class Provider extends BaseProvider {
       const [count, ...otherParams] = params;
       params = [`0x${count.toString(16)}`, ...otherParams];
     }
-    // Validate block number params
-    else if (method === 'eth_getBlockByNumber') {
-      const [blockNumberOrTag, ...otherParams] = params;
-      params = [typeof blockNumberOrTag === 'number' ? `0x${blockNumberOrTag.toString(16)}` : blockNumberOrTag, ...otherParams];
+    // Calling the method to get the shelf
+    else if (method === 'eth_getBlockByNumber' || method === 'eth_getBlockByHash') {
+      return this._getBlockWithCache(method, params);
     }
 
     // Returns cached results
@@ -199,15 +207,7 @@ export class Provider extends BaseProvider {
       return this._chainIdCache;
     }
 
-    const result = this._execProviderMethod('send', [method, params]).then(result => {
-      // Networks like CELO return non-standard blocks, which leads to an error.
-      // Here we add the missing parameters to the block, and bring the fields to the desired type.
-      if (method === 'eth_getBlockByNumber') {
-        return formatBlock(result);
-      }
-
-      return result;
-    });
+    const result = this._execProviderMethod('send', [method, params]);
 
     // Add results to cache
     if (method === 'eth_blockNumber') {
@@ -216,6 +216,40 @@ export class Provider extends BaseProvider {
     } else if (method === 'eth_chainId') {
       this._chainIdCache = result;
       setTimeout(() => this._chainIdCache = undefined, CHAIN_ID_CACHE_TIMEOUT);
+    }
+
+    return result;
+  }
+
+  /**
+   * Get a block using the cache
+   * @param method
+   * @param params
+   * @private
+   */
+  private async _getBlockWithCache(method: 'eth_getBlockByNumber' | 'eth_getBlockByHash', params: Array<any>): Promise<Block> {
+    // Block ID can be block hash, block number or block tag (earliest, pending, latest)
+    const [blockId, ...otherParams] = params;
+    params = [typeof blockId === 'number' ? `0x${blockId.toString(16)}` : blockId, ...otherParams];
+
+    // Try to use cache to get block
+    if (method === 'eth_getBlockByNumber' && !['earliest', 'pending'].includes(blockId)) {
+      const blockNumber = blockId === 'latest' ? this._lastBlockNumber : BigNumber.from(blockId).toNumber();
+      if (blockNumber > 0 && blockNumber in this._blockCache && await getPromiseState(this._blockCache[blockNumber]) !== 'rejected') {
+        return this._blockCache[blockNumber];
+      }
+    }
+
+    // Networks like CELO return non-standard blocks, which leads to an error.
+    // Here we add the missing parameters to the block, and bring the fields to the desired type.
+    const result = this._execProviderMethod('send', [method, params]).then(result => {
+      return result ? formatBlock(result) : result;
+    });
+
+    if (method === 'eth_getBlockByNumber' && !['earliest', 'pending'].includes(blockId)) {
+      const blockNumber = blockId === 'latest' ? this._lastBlockNumber : BigNumber.from(blockId).toNumber();
+      this._blockCache[blockNumber] = result;
+      setTimeout(() => Reflect.deleteProperty(this._blockCache, blockNumber), BLOCK_CACHE_TIMEOUT);
     }
 
     return result;

@@ -41,7 +41,7 @@ export class GasController extends BaseHttpController {
   })
   @Tags('Gas')
   @httpGet('/')
-  async geGasPrice(): Promise<GasSettings> {
+  async getGasPrice(): Promise<GasSettings> {
     return await this._gasService.getGasSettings();
   }
 }
