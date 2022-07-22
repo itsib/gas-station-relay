@@ -25,7 +25,7 @@ To build and run this project you need to have the following installed on your s
 ### Development
 Before starting the server, you need to create a .env file and add the required environment variables there:
 ```dotenv
-RPC_URL=https://kovan.infura.io/v3/{{API_KEY}}
+CHAIN_ID=1
 FEE_PAYER_WALLET_KEY=0x....
 GAS_STATION_CONTRACT_ADDRESS=0xE70F0579DB25f037F6CBe48080224a58C5E6f695
 ```
@@ -61,7 +61,7 @@ services:
     environment:
       PORT: '3200'
       CORS_ORIGIN: '*'
-      RPC_URL: 'https://kovan.infura.io/v3/{{INFURA_API_KEY}}'
+      CHAIN_ID: '42'
       FEE_PAYER_WALLET_KEY: '0x....'
       GAS_STATION_CONTRACT_ADDRESS: ''
     ports:
