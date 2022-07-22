@@ -6,3 +6,4 @@ export * from './is-address';
 export * from './provider';
 export * from './get-network-config';
 export * from './cancel-promise-by-timeout';
+export * from './format-block';

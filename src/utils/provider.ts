@@ -1,18 +1,19 @@
-import { Block } from '@ethersproject/abstract-provider';
 import { Network } from '@ethersproject/networks';
 import { BaseProvider } from '@ethersproject/providers';
-import { BigNumber, getDefaultProvider } from 'ethers';
+import { getDefaultProvider } from 'ethers';
 import { CONFIG } from '../config';
 import { NetworkConfig } from '../types';
 import { cancelPromiseByTimeout, TimeoutError } from './cancel-promise-by-timeout';
+import { formatBlock } from './format-block';
 import { getPromiseState } from './get-promise-state';
 import { logger } from './logger';
 
+const BLOCK_NUMBER_CACHE_TIMEOUT = 3000; // The time of storing the block number in the cache
+const CHAIN_ID_CACHE_TIMEOUT = 30 * 60000; // The storage time of the chain id in the cache
 const NETWORK_CACHE_TIMEOUT = 20 * 60000; // We update the network data no more than once every 20 minutes.
-const DEFAULT_BLOCK_GAS_LIMIT = BigNumber.from(20_000_000);
 const TIMEOUT_ERROR_MUL = 0.99;
 const OTHER_ERROR_MUL = 0.9;
-const SUCCESS_MUL = 1.001;
+const SUCCESS_MUL = 1.01;
 
 interface ProviderConfig {
   index: number;
@@ -30,12 +31,17 @@ export class Provider extends BaseProvider {
    * Network detection cache
    * @private
    */
-  private _detectedNetwork?: Promise<Network>;
+  private _detectedNetworkCache?: Promise<Network>;
   /**
-   * Recent network updates.
+   * The saved number of the last block, to reduce the load on the RPC server.
    * @private
    */
-  private _detectedNetworkLastUpdate: number;
+  private _blockNumberCache?: Promise<string>;
+  /**
+   * The saved chain id, to reduce the load on the RPC server.
+   * @private
+   */
+  private _chainIdCache?: Promise<string>;
 
   constructor(networkConfig: NetworkConfig) {
     const rpcUrls = networkConfig.rpc.reduce<string[]>((acc, rpcSource) => {
@@ -71,23 +77,21 @@ export class Provider extends BaseProvider {
         weight: 1,
       }
     });
-    this._detectedNetworkLastUpdate = 0;
   }
 
   /**
    * Network detection.
    */
   async detectNetwork(): Promise<Network> {
-    if (!this._detectedNetwork || this._detectedNetworkLastUpdate + NETWORK_CACHE_TIMEOUT < Date.now() || await getPromiseState(this._detectedNetwork) === 'rejected') {
-      this._detectedNetworkLastUpdate = Date.now();
-      this._detectedNetwork = new Promise<Network>(async (resolve, reject) => {
+    if (!this._detectedNetworkCache || await getPromiseState(this._detectedNetworkCache) === 'rejected') {
+      this._detectedNetworkCache = new Promise<Network>(async (resolve, reject) => {
         let result: Network | null = null;
         let error: Error | null = null;
 
         const networks: (Network | null)[] = await Promise.all(this._providerConfigs.map((c) => {
           return cancelPromiseByTimeout<Network>(c.provider.getNetwork(), CONFIG.RPC_REQUEST_TIMEOUT)
             .then(network => {
-              c.weight = 1;
+              c.weight = c.weight === 0 ? 0.5 : c.weight;
               return network;
             })
             .catch(e => {
@@ -116,12 +120,13 @@ export class Provider extends BaseProvider {
         }
 
         if (result) {
+          setTimeout(() => this._detectedNetworkCache = undefined, NETWORK_CACHE_TIMEOUT);
           return resolve(result);
         }
         return reject(error || new Error('Cannot detect network'));
       });
     }
-    return this._detectedNetwork;
+    return this._detectedNetworkCache;
   }
 
   /**
@@ -152,6 +157,20 @@ export class Provider extends BaseProvider {
       // They were all an error; pick the first error
       throw results[0];
     }
+    // Method 'getBlock' should be call through the 'send' method, for format a response block and caching.
+    else if (method === 'getBlock') {
+      if (params.blockTag) {
+        return this.send('eth_getBlockByNumber', [ params.blockTag, !!params.includeTransactions ]);
+      } else if (params.blockHash) {
+        return this.send('eth_getBlockByHash', [ params.blockHash, !!params.includeTransactions ]);
+      } else {
+        throw new Error(`Method getBlock call with wrong parameters`);
+      }
+    }
+    // Method 'getBlockNumber' should be call through the 'send' method, for caching.
+    else if (method === 'getBlockNumber') {
+      return this.send('eth_blockNumber', []);
+    }
 
     return this._execProviderMethod('perform', [method, params]);
   }
@@ -172,52 +191,34 @@ export class Provider extends BaseProvider {
       const [blockNumberOrTag, ...otherParams] = params;
       params = [typeof blockNumberOrTag === 'number' ? `0x${blockNumberOrTag.toString(16)}` : blockNumberOrTag, ...otherParams];
     }
-    return this._execProviderMethod('send', [method, params]);
-  }
 
-  /**
-   * Get block by number or tag and format result
-   * @param blockNumberOrTag
-   */
-  async getBlock(blockNumberOrTag: string | number): Promise<Block> {
-    const block = await this.send('eth_getBlockByNumber', [blockNumberOrTag, false]);
-    const difficulty = BigNumber.from(block.difficulty || block.totalDifficulty || '0x1');
-
-    let gasLimit: BigNumber;
-    if (block.gasLimit) {
-      gasLimit = BigNumber.from(block.gasLimit);
-    } else {
-      if (block.gasUsed) {
-        const gasUsed = BigNumber.from(block.gasUsed);
-        if (gasUsed.gt(DEFAULT_BLOCK_GAS_LIMIT)) {
-          gasLimit = gasUsed;
-        }
-      }
-
-      if (!gasLimit) {
-        gasLimit = DEFAULT_BLOCK_GAS_LIMIT;
-      }
+    // Returns cached results
+    if (method === 'eth_blockNumber' && this._blockNumberCache) {
+      return this._blockNumberCache;
+    } else if (method === 'eth_chainId' && this._chainIdCache) {
+      return this._chainIdCache;
     }
 
-    return {
-      hash: block.hash,
-      parentHash: block.parentHash,
-      number: BigNumber.from(block.number).toNumber(),
+    const result = this._execProviderMethod('send', [method, params]).then(result => {
+      // Networks like CELO return non-standard blocks, which leads to an error.
+      // Here we add the missing parameters to the block, and bring the fields to the desired type.
+      if (method === 'eth_getBlockByNumber') {
+        return formatBlock(result);
+      }
 
-      timestamp: BigNumber.from(block.timestamp).toNumber(),
-      nonce: block.nonce || block.number,
-      difficulty: difficulty.toString() as any,
-      _difficulty: difficulty,
+      return result;
+    });
 
-      gasLimit: gasLimit,
-      gasUsed: BigNumber.from(block.gasUsed),
+    // Add results to cache
+    if (method === 'eth_blockNumber') {
+      this._blockNumberCache = result;
+      setTimeout(() => this._blockNumberCache = undefined, BLOCK_NUMBER_CACHE_TIMEOUT);
+    } else if (method === 'eth_chainId') {
+      this._chainIdCache = result;
+      setTimeout(() => this._chainIdCache = undefined, CHAIN_ID_CACHE_TIMEOUT);
+    }
 
-      miner: block.miner,
-      extraData: block.extraData,
-
-      baseFeePerGas: block.baseFeePerGas ? BigNumber.from(block.baseFeePerGas) : undefined,
-      transactions: block.transactions,
-    };
+    return result;
   }
 
   /**

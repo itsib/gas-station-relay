@@ -4,23 +4,21 @@ import { suggestFees } from 'eip1559-fee-suggestions-ethers';
 import { inject, injectable } from 'inversify';
 import { CONFIG } from '../config';
 import { GasSettings } from '../types';
-import { getPromiseState, logger, Provider } from '../utils';
+import { getPromiseState, Provider } from '../utils';
 
 @injectable()
 export class GasService {
-  private _gasCacheTimestamp: number;
+
   private _gasCache?: Promise<GasSettings>;
 
-  constructor(@inject('Provider') private _provider: Provider) {
-    this._gasCacheTimestamp = 0;
-  }
+  constructor(@inject('Provider') private _provider: Provider) {}
 
   async getGasSettings(): Promise<GasSettings> {
-    if (!this._gasCache || this._gasCacheTimestamp + CONFIG.GAS_CACHE_TIMEOUT < Date.now() || await getPromiseState(this._gasCache) === 'rejected') {
-      this._gasCacheTimestamp = Date.now();
+    if (!this._gasCache || await getPromiseState(this._gasCache) === 'rejected') {
       this._gasCache = new Promise<GasSettings>(async (resolve, reject) => {
         try {
           const { chainId } = await this._provider.getNetwork();
+          let gasSettings: GasSettings;
           switch (chainId) {
             case 1:       // Mainnet
             case 3:       // Ropsten
@@ -29,22 +27,25 @@ export class GasService {
             case 42:      // Kovan
             case 137:     // Polygon
             case 80001:   // Mumbai (Polygon testnet)
-              resolve(await this._getEthereumGasSettings());
+              gasSettings = await this._getEthereumGasSettings();
               break;
             case 56:      // Binance Smart Chain
             case 97:      // Binance Smart Chain (Testnet)
-              resolve(await this._getBinanceGasSettings());
+              gasSettings = await this._getBinanceGasSettings();
               break;
             case 250:     // Fantom
-              resolve(await this._getFantomGasSettings());
+              gasSettings = await this._getFantomGasSettings();
               break;
             case 10:      // Optimism
             case 69:      // Optimism Kovan
-              resolve(await this._getOptimismGasSettings());
+              gasSettings = await this._getOptimismGasSettings();
               break;
             default:
-              resolve(await this._getDefaultGasSettings());
+              gasSettings = await this._getDefaultGasSettings();
           }
+
+          setTimeout(() => this._gasCache = undefined, CONFIG.GAS_CACHE_TIMEOUT);
+          return resolve(gasSettings);
         } catch (e) {
           return reject(e)
         }

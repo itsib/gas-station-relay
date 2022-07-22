@@ -13,7 +13,7 @@ export interface GasSettings {
   middle: GasSettingsBySpeed;
   low: GasSettingsBySpeed;
   /**
-   * Average block processing time in the blockchain
+   * Average block processing time in the blockchain, in seconds.
    */
   avgBlockTime: string;
 }
