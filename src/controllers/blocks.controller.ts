@@ -22,13 +22,19 @@ export class BlocksController extends BaseHttpController {
    * @summary Latest block number
    */
   @Get('/latest')
-  @Example<{ number: number }>({
+  @Example<{ number: number; hexNumber: string }>({
     number: 123543,
+    hexNumber: '0x123543',
   })
   @Tags('Blocks')
   @httpGet('/latest')
-  async getBlockNumber(): Promise<{ number: number }> {
-    return await this._provider.getBlockNumber().then(number => ({ number }));
+  async getBlockNumber(): Promise<{ number: number, hexNumber: string }> {
+    return await this._provider.getBlockNumber().then(number => {
+      return {
+        number,
+        hexNumber: `0x${number.toString(16)}`,
+      };
+    });
   }
 
   /**
