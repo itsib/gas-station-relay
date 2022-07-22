@@ -13,13 +13,14 @@ export const CONFIG = {
   CORS_CREDENTIALS: process.env.CORS_CREDENTIALS === 'true',
   CORS_ORIGIN: process.env.CORS_ORIGIN || '*',
   // Chain settings
+  RPC_REQUEST_TIMEOUT: Number(process.env.RPC_REQUEST_TIMEOUT) || 5000,
   CHAIN_ID: Number(required(process.env.CHAIN_ID, 'The environment variable CHAIN_ID is not set.')),
   INFURA_API_KEY: process.env.INFURA_API_KEY || undefined,
   FEE_PAYER_WALLET_KEY: process.env.FEE_PAYER_WALLET_KEY || undefined,
   GAS_STATION_CONTRACT_ADDRESS: validateAddress(process.env.GAS_STATION_CONTRACT_ADDRESS, false, 'The environment variable GAS_STATION_CONTRACT_ADDRESS is not set.'),
   GAS_PRICE_ORACLE_CONTRACT: '0x420000000000000000000000000000000000000f',
   // Gas settings
-  GAS_CACHE_TIMEOUT: Number(process.env.GAS_CACHE_TIMEOUT) || 10,
+  GAS_CACHE_TIMEOUT: Number(process.env.GAS_CACHE_TIMEOUT) || 10000,
   FEE_PER_GAS_MULTIPLIER: Number(process.env.FEE_PER_GAS_MULTIPLIER) || 1,
   ESTIMATE_GAS_MULTIPLIER: Number(process.env.ESTIMATE_GAS_MULTIPLIER) || 1,
 }

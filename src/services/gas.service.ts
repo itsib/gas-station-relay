@@ -4,7 +4,7 @@ import { suggestFees } from 'eip1559-fee-suggestions-ethers';
 import { inject, injectable } from 'inversify';
 import { CONFIG } from '../config';
 import { GasSettings } from '../types';
-import { logger, Provider } from '../utils';
+import { getPromiseState, logger, Provider } from '../utils';
 
 @injectable()
 export class GasService {
@@ -16,49 +16,46 @@ export class GasService {
   }
 
   async getGasSettings(): Promise<GasSettings> {
-    const currentTimestamp = Date.now();
-    if (this._gasCache && currentTimestamp - CONFIG.GAS_CACHE_TIMEOUT * 1000 < this._gasCacheTimestamp) {
-      logger.debug('Response gas from cache');
-      return this._gasCache;
+    if (!this._gasCache || this._gasCacheTimestamp + CONFIG.GAS_CACHE_TIMEOUT < Date.now() || await getPromiseState(this._gasCache) === 'rejected') {
+      this._gasCacheTimestamp = Date.now();
+      this._gasCache = new Promise<GasSettings>(async (resolve, reject) => {
+        try {
+          const { chainId } = await this._provider.getNetwork();
+          switch (chainId) {
+            case 1:       // Mainnet
+            case 3:       // Ropsten
+            case 4:       // Rinkeby
+            case 5:       // Gorly
+            case 42:      // Kovan
+            case 137:     // Polygon
+            case 80001:   // Mumbai (Polygon testnet)
+              resolve(await this._getEthereumGasSettings());
+              break;
+            case 56:      // Binance Smart Chain
+            case 97:      // Binance Smart Chain (Testnet)
+              resolve(await this._getBinanceGasSettings());
+              break;
+            case 250:     // Fantom
+              resolve(await this._getFantomGasSettings());
+              break;
+            case 10:      // Optimism
+            case 69:      // Optimism Kovan
+              resolve(await this._getOptimismGasSettings());
+              break;
+            default:
+              resolve(await this._getDefaultGasSettings());
+          }
+        } catch (e) {
+          return reject(e)
+        }
+      });
     }
-    this._gasCacheTimestamp = currentTimestamp;
-
-    const { chainId } = await this._provider.getNetwork();
-    switch (chainId) {
-      case 1:       // Mainnet
-      case 3:       // Ropsten
-      case 4:       // Rinkeby
-      case 5:       // Gorly
-      case 42:      // Kovan
-      case 137:     // Polygon
-      case 80001:   // Mumbai (Polygon testnet)
-        this._gasCache = this._getEthereumGasSettings();
-        break;
-      case 56:      // Binance Smart Chain
-      case 97:      // Binance Smart Chain (Testnet)
-        this._gasCache = this._getBinanceGasSettings();
-        break;
-      case 250:     // Fantom
-        this._gasCache = this._getFantomGasSettings();
-        break;
-      case 10:      // Optimism
-      case 69:      // Optimism Kovan
-        this._gasCache = this._getOptimismGasSettings();
-        break;
-      default:
-        this._gasCache = this._getDefaultGasSettings();
-    }
-
     return this._gasCache;
   }
 
   private async _getEthereumGasSettings(): Promise<GasSettings> {
-    const send = (method: string, args: [number, string, number[]]) => {
-      const [ count, ...otherArgs ] = args;
-      return (this._provider as any).send(method, [`0x${count.toString(16)}`, ...otherArgs]);
-    }
     const lastBlock = await this._provider.getBlock('latest');
-    const [pastBlock, suggestedFees] = await Promise.all([this._provider.getBlock(lastBlock.number - 1000), suggestFees({ send } as any)]);
+    const [pastBlock, suggestedFees] = await Promise.all([this._provider.getBlock(lastBlock.number - 1000), suggestFees(this._provider as any)]);
 
     const { baseFeeSuggestion, maxPriorityFeeSuggestions, confirmationTimeByPriorityFee } = suggestedFees;
     const avgBlockTime = Big(lastBlock.timestamp).minus(pastBlock.timestamp).div(1000).toString();

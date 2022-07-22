@@ -4,95 +4,136 @@ import { BaseProvider } from '@ethersproject/providers';
 import { BigNumber, getDefaultProvider } from 'ethers';
 import { CONFIG } from '../config';
 import { NetworkConfig } from '../types';
-import { cancelPromiseByTimeout } from './cancel-promise-by-timeout';
+import { cancelPromiseByTimeout, TimeoutError } from './cancel-promise-by-timeout';
+import { getPromiseState } from './get-promise-state';
 import { logger } from './logger';
 
+const NETWORK_CACHE_TIMEOUT = 20 * 60000; // We update the network data no more than once every 20 minutes.
 const DEFAULT_BLOCK_GAS_LIMIT = BigNumber.from(20_000_000);
+const TIMEOUT_ERROR_MUL = 0.99;
+const OTHER_ERROR_MUL = 0.9;
+const SUCCESS_MUL = 1.001;
 
 interface ProviderConfig {
   index: number;
   provider: BaseProvider;
   weight: number;
-  timeout: number;
 }
 
 export class Provider extends BaseProvider {
-
+  /**
+   * Stored providers and weight
+   * @private
+   */
   private readonly _providerConfigs: ProviderConfig[];
-
-  // Due to the highly asyncronous nature of the blockchain, we need
-  // to make sure we never unroll the blockNumber due to our random
-  // sample of backends
-  _highestBlockNumber: number;
+  /**
+   * Network detection cache
+   * @private
+   */
+  private _detectedNetwork?: Promise<Network>;
+  /**
+   * Recent network updates.
+   * @private
+   */
+  private _detectedNetworkLastUpdate: number;
 
   constructor(networkConfig: NetworkConfig) {
     const rpcUrls = networkConfig.rpc.reduce<string[]>((acc, rpcSource) => {
-      if (rpcSource.includes('${INFURA_API_KEY}')) {
-        if (CONFIG.INFURA_API_KEY) {
-          acc.push(rpcSource.replace('${INFURA_API_KEY}', CONFIG.INFURA_API_KEY));
+      if (!rpcSource.startsWith('ws')) {
+        if (rpcSource.includes('${INFURA_API_KEY}')) {
+          if (CONFIG.INFURA_API_KEY) {
+            acc.push(rpcSource.replace('${INFURA_API_KEY}', CONFIG.INFURA_API_KEY));
+          } else {
+            logger.warn('INFURA_API_KEY not provided for RPC URL');
+          }
         } else {
-          logger.warn('INFURA_API_KEY not provided for RPC URL');
+          acc.push(rpcSource);
         }
-      } else {
-        acc.push(rpcSource);
       }
       return acc;
     }, []);
     if (rpcUrls.length === 0) {
       throw new Error('RPC URLs not is empty');
     }
+
     const network: Network = {
       name: networkConfig.name,
       chainId: networkConfig.chainId,
       ensAddress: networkConfig.ens?.registry,
     };
+
     super(network);
 
-    try {
-      this._providerConfigs = rpcUrls.map((url, index) => {
-        return {
-          index,
-          provider: getDefaultProvider(url),
-          weight: 1,
-          timeout: 5000,
-        }
-      });
-      this._highestBlockNumber = -1;
-    } catch (e) {
-      console.error(e);
-      throw e;
-    }
+    this._providerConfigs = rpcUrls.map((url, index) => {
+      return {
+        index,
+        provider: getDefaultProvider(url),
+        weight: 1,
+      }
+    });
+    this._detectedNetworkLastUpdate = 0;
   }
 
+  /**
+   * Network detection.
+   */
   async detectNetwork(): Promise<Network> {
-    const networks = await Promise.all(this._providerConfigs.map((c) => c.provider.getNetwork().catch(() => null)));
-    let result = null;
+    if (!this._detectedNetwork || this._detectedNetworkLastUpdate + NETWORK_CACHE_TIMEOUT < Date.now() || await getPromiseState(this._detectedNetwork) === 'rejected') {
+      this._detectedNetworkLastUpdate = Date.now();
+      this._detectedNetwork = new Promise<Network>(async (resolve, reject) => {
+        let result: Network | null = null;
+        let error: Error | null = null;
 
-    for (let i = 0; i < networks.length; i++) {
-      const network = networks[i];
+        const networks: (Network | null)[] = await Promise.all(this._providerConfigs.map((c) => {
+          return cancelPromiseByTimeout<Network>(c.provider.getNetwork(), CONFIG.RPC_REQUEST_TIMEOUT)
+            .then(network => {
+              c.weight = 1;
+              return network;
+            })
+            .catch(e => {
+              c.weight = 0;
+              error = e;
+              return null;
+            });
+        }));
 
-      // Null! We do not know our network; bail.
-      if (network == null) {
-        continue;
-      }
+        for (let i = 0; i < networks.length; i++) {
+          const network = networks[i];
 
-      if (result) {
-        // Make sure the network matches the previous networks
-        if (!(result.name === network.name && result.chainId === network.chainId && ((result.ensAddress === network.ensAddress) || (result.ensAddress == null && network.ensAddress == null)))) {
-          logger.warn(`Provider mismatch network`, network);
+          // Null! We do not know our network; bail.
+          if (network == null) {
+            continue;
+          }
+
+          if (result) {
+            // Make sure the network matches the previous networks
+            if (!(result.name === network.name && result.chainId === network.chainId)) {
+              logger.warn(`Provider mismatch network`, network);
+            }
+          } else {
+            result = network;
+          }
         }
-      } else {
-        result = network;
-      }
-    }
 
-    return result;
+        if (result) {
+          return resolve(result);
+        }
+        return reject(error || new Error('Cannot detect network'));
+      });
+    }
+    return this._detectedNetwork;
   }
 
+  /**
+   * Perform call
+   * @param method
+   * @param params
+   */
   async perform(method: string, params: { [name: string]: any }): Promise<any> {
     // Sending transactions is special; always broadcast it to all backends
     if (method === 'sendTransaction') {
-      const results: Array<string | Error> = await Promise.all(this._providerConfigs.map((c) => {
+      const providers = this._providerConfigs.filter(({ weight }) => weight !== 0);
+      const results: Array<string | Error> = await Promise.all(providers.map((c) => {
         return c.provider.sendTransaction(params.signedTransaction).then((result) => {
           return result.hash;
         }, (error) => {
@@ -112,21 +153,33 @@ export class Provider extends BaseProvider {
       throw results[0];
     }
 
-    // We need to make sure we are in sync with our backends, so we need
-    // to know this before we can make a lot of calls
-    if (this._highestBlockNumber === -1 && method !== 'getBlockNumber') {
-      await this.getBlockNumber();
-    }
-
     return this._execProviderMethod('perform', [method, params]);
   }
 
-  async send(method: string, param: any) {
-    return this._execProviderMethod('send', [method, param]);
+  /**
+   * Call RPC method
+   * @param method
+   * @param params
+   */
+  async send(method: string, params: Array<any>): Promise<any> {
+    // Validate fee history params
+    if (method === 'eth_feeHistory') {
+      const [count, ...otherParams] = params;
+      params = [`0x${count.toString(16)}`, ...otherParams];
+    }
+    // Validate block number params
+    else if (method === 'eth_getBlockByNumber') {
+      const [blockNumberOrTag, ...otherParams] = params;
+      params = [typeof blockNumberOrTag === 'number' ? `0x${blockNumberOrTag.toString(16)}` : blockNumberOrTag, ...otherParams];
+    }
+    return this._execProviderMethod('send', [method, params]);
   }
 
-  async getBlock (blockNumberOrTag: string | number): Promise<Block> {
-    blockNumberOrTag = typeof blockNumberOrTag === 'number' ? `0x${blockNumberOrTag.toString(16)}` : blockNumberOrTag;
+  /**
+   * Get block by number or tag and format result
+   * @param blockNumberOrTag
+   */
+  async getBlock(blockNumberOrTag: string | number): Promise<Block> {
     const block = await this.send('eth_getBlockByNumber', [blockNumberOrTag, false]);
     const difficulty = BigNumber.from(block.difficulty || block.totalDifficulty || '0x1');
 
@@ -167,23 +220,36 @@ export class Provider extends BaseProvider {
     };
   }
 
-  private async _execProviderMethod(method: string, params: any[]): Promise<any> {
-    const configs = this._providerConfigs.sort((a, b) => (b.weight - a.weight));
+  /**
+   * Call the method of one of the providers, and change its weight, depending on the results.
+   * @param method Provider's method. !!!NOT TO BE CONFUSED WITH THE RPC METHOD!!!
+   * @param params Array of parameters passed to the method.
+   * @private
+   */
+  private async _execProviderMethod<T = any>(method: string, params: any[]): Promise<T> {
+    const configs = this._providerConfigs.filter(({ weight }) => weight !== 0).sort((a, b) => (b.weight - a.weight));
     const errors: { index: number; error: Error } [] = [];
 
-    for(let i = 0; i < configs.length; i++) {
+    for (let i = 0; i < configs.length; i++) {
       const config = configs[i];
       try {
-        return await cancelPromiseByTimeout(config.provider[method](...params), config.timeout).then(result => {
-          errors.forEach(({ index, error}) => {
-            const providerConfig = this._providerConfigs.find(p => p.index === index);
-            providerConfig.weight *= 0.99;
-          });
-          config.weight = config.weight < 100 ? config.weight * 1.01 : config.weight;
-          return result;
+        const result = await cancelPromiseByTimeout(config.provider[method](...params), CONFIG.RPC_REQUEST_TIMEOUT);
+
+        // Lowering the weight of providers who made an error
+        errors.forEach(({ index, error }) => {
+          const providerConfig = this._providerConfigs.find(p => p.index === index);
+          providerConfig.weight *= error instanceof TimeoutError ? TIMEOUT_ERROR_MUL : OTHER_ERROR_MUL;
         });
+
+        // We increase the weight of the provider who executed the request.
+        if (config.weight < 1) {
+          const newWeight = config.weight * SUCCESS_MUL;
+          config.weight = newWeight < 1 ? newWeight : 1;
+        }
+
+        return result;
       } catch (e) {
-        console.error(e);
+        logger.warn(`Provider index: ${config.index}; Method: ${params[0] || method}; ${e.message}`);
         errors.push({ index: config.index, error: e });
       }
     }
