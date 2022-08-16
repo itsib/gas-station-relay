@@ -79,22 +79,22 @@ export class GasService {
 
     return {
       high: {
-        maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.urgent).toFixed(),
+        maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.urgent).toFixed(0),
         maxPriorityFeePerGas: maxPriorityFeeSuggestions.urgent,
         baseFeePerGas: lastBlock.baseFeePerGas.toString(),
-        confirmationTime: urgentConfirmTimeInBlocks ? Big(urgentConfirmTimeInBlocks).times(avgBlockTime).toFixed() : undefined,
+        confirmationTime: urgentConfirmTimeInBlocks ? Big(urgentConfirmTimeInBlocks).times(avgBlockTime).toFixed(0) : undefined,
       },
       middle: {
-        maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.fast).toFixed(),
+        maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.fast).toFixed(0),
         maxPriorityFeePerGas: maxPriorityFeeSuggestions.fast,
         baseFeePerGas: lastBlock.baseFeePerGas.toString(),
-        confirmationTime: fastConfirmTimeInBlocks ? Big(fastConfirmTimeInBlocks).times(avgBlockTime).toFixed() : undefined,
+        confirmationTime: fastConfirmTimeInBlocks ? Big(fastConfirmTimeInBlocks).times(avgBlockTime).toFixed(0) : undefined,
       },
       low: {
-        maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.normal).toFixed(),
+        maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.normal).toFixed(0),
         maxPriorityFeePerGas: maxPriorityFeeSuggestions.normal,
         baseFeePerGas: lastBlock.baseFeePerGas.toString(),
-        confirmationTime: normalConfirmTimeInBlocks ? Big(normalConfirmTimeInBlocks).times(avgBlockTime).toFixed() : undefined,
+        confirmationTime: normalConfirmTimeInBlocks ? Big(normalConfirmTimeInBlocks).times(avgBlockTime).toFixed(0) : undefined,
       },
       avgBlockTime,
     };
@@ -140,23 +140,23 @@ export class GasService {
         throw new Error('It is impossible to obtain gas price');
       }
 
-      const highMaxPriorityFeePerGas = Big(externalGasSettings.rapidgaspricegwei).times(gweiMultiplier).toFixed();
-      const middleMaxPriorityFeePerGas = Big(externalGasSettings.fastgaspricegwei).times(gweiMultiplier).toFixed();
-      const lowMaxPriorityFeePerGas = Big(externalGasSettings.standardgaspricegwei).times(gweiMultiplier).toFixed();
+      const highMaxPriorityFeePerGas = Big(externalGasSettings.rapidgaspricegwei).times(gweiMultiplier).toFixed(0);
+      const middleMaxPriorityFeePerGas = Big(externalGasSettings.fastgaspricegwei).times(gweiMultiplier).toFixed(0);
+      const lowMaxPriorityFeePerGas = Big(externalGasSettings.standardgaspricegwei).times(gweiMultiplier).toFixed(0);
 
       return {
         high: {
-          maxFeePerGas: baseFeePerGas.add(highMaxPriorityFeePerGas).toFixed(),
+          maxFeePerGas: baseFeePerGas.add(highMaxPriorityFeePerGas).toFixed(0),
           maxPriorityFeePerGas: highMaxPriorityFeePerGas,
           baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         },
         middle: {
-          maxFeePerGas: baseFeePerGas.add(middleMaxPriorityFeePerGas).toFixed(),
+          maxFeePerGas: baseFeePerGas.add(middleMaxPriorityFeePerGas).toFixed(0),
           maxPriorityFeePerGas: middleMaxPriorityFeePerGas,
           baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         },
         low: {
-          maxFeePerGas: baseFeePerGas.add(lowMaxPriorityFeePerGas).toFixed(),
+          maxFeePerGas: baseFeePerGas.add(lowMaxPriorityFeePerGas).toFixed(0),
           maxPriorityFeePerGas: lowMaxPriorityFeePerGas,
           baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         },
@@ -198,13 +198,13 @@ export class GasService {
 
     return {
       high: {
-        gasPrice: bGasPrice.times(1.8).toFixed(),
+        gasPrice: bGasPrice.times(1.8).toFixed(0),
       },
       middle: {
-        gasPrice: bGasPrice.times(1.4).toFixed(),
+        gasPrice: bGasPrice.times(1.4).toFixed(0),
       },
       low: {
-        gasPrice: bGasPrice.times(1.01).toFixed(),
+        gasPrice: bGasPrice.times(1.01).toFixed(0),
       },
       avgBlockTime,
     };
