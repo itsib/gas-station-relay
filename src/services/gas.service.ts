@@ -81,16 +81,19 @@ export class GasService {
       high: {
         maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.urgent).toFixed(),
         maxPriorityFeePerGas: maxPriorityFeeSuggestions.urgent,
+        baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         confirmationTime: urgentConfirmTimeInBlocks ? Big(urgentConfirmTimeInBlocks).times(avgBlockTime).toFixed() : undefined,
       },
       middle: {
         maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.fast).toFixed(),
         maxPriorityFeePerGas: maxPriorityFeeSuggestions.fast,
+        baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         confirmationTime: fastConfirmTimeInBlocks ? Big(fastConfirmTimeInBlocks).times(avgBlockTime).toFixed() : undefined,
       },
       low: {
         maxFeePerGas: Big(baseFeePerGas).add(maxPriorityFeeSuggestions.normal).toFixed(),
         maxPriorityFeePerGas: maxPriorityFeeSuggestions.normal,
+        baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         confirmationTime: normalConfirmTimeInBlocks ? Big(normalConfirmTimeInBlocks).times(avgBlockTime).toFixed() : undefined,
       },
       avgBlockTime,
@@ -145,14 +148,17 @@ export class GasService {
         high: {
           maxFeePerGas: baseFeePerGas.add(highMaxPriorityFeePerGas).toFixed(),
           maxPriorityFeePerGas: highMaxPriorityFeePerGas,
+          baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         },
         middle: {
           maxFeePerGas: baseFeePerGas.add(middleMaxPriorityFeePerGas).toFixed(),
           maxPriorityFeePerGas: middleMaxPriorityFeePerGas,
+          baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         },
         low: {
           maxFeePerGas: baseFeePerGas.add(lowMaxPriorityFeePerGas).toFixed(),
           maxPriorityFeePerGas: lowMaxPriorityFeePerGas,
+          baseFeePerGas: lastBlock.baseFeePerGas.toString(),
         },
         avgBlockTime,
       };

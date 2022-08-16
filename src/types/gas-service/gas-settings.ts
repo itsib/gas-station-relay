@@ -2,6 +2,7 @@ export interface GasSettingsBySpeed {
   gasPrice?: string;
   maxFeePerGas?: string;
   maxPriorityFeePerGas?: string;
+  baseFeePerGas?: string;
   /**
    * Approximate transaction confirmation time, with current parameters. In seconds.
    */

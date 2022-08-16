@@ -1,3 +1,4 @@
+import './polyfills';
 import { NotFound } from '@tsed/exceptions';
 import compression from 'compression';
 import cors from 'cors';
@@ -7,7 +8,6 @@ import { resolve } from 'path';
 import { CONFIG } from './config';
 import { buildContainer } from './ioc/container';
 import { errorMiddleware, httpLogMiddleware } from './middlewares';
-import './polyfills';
 import { logger } from './utils';
 
 process.on('uncaughException', (e) => {

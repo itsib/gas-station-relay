@@ -22,18 +22,21 @@ export class GasController extends BaseHttpController {
     high: {
       maxFeePerGas: '3904221514',
       maxPriorityFeePerGas: '3904221504',
+      baseFeePerGas: '3904221',
       gasPrice: '3904221504',
       confirmationTime: '363.06',
     },
     middle: {
       maxFeePerGas: '3904221514',
       maxPriorityFeePerGas: '3904221504',
+      baseFeePerGas: '3904221',
       gasPrice: '3904221504',
       confirmationTime: '363.06',
     },
     low: {
       maxFeePerGas: '3904221514',
       maxPriorityFeePerGas: '3904221504',
+      baseFeePerGas: '3904221',
       gasPrice: '3904221504',
       confirmationTime: '363.06',
     },
